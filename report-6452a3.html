@@ -1,0 +1,862 @@
+<!doctype html>
+<html>
+<head>
+<title>kwset.c</title>
+<style type="text/css">
+ body { color:#000000; background-color:#ffffff }
+ body { font-family:Helvetica, sans-serif; font-size:10pt }
+ h1 { font-size:14pt }
+ .code { border-collapse:collapse; width:100%; }
+ .code { font-family: "Monospace", monospace; font-size:10pt }
+ .code { line-height: 1.2em }
+ .comment { color: green; font-style: oblique }
+ .keyword { color: blue }
+ .string_literal { color: red }
+ .directive { color: darkmagenta }
+ .expansion { display: none; }
+ .macro:hover .expansion { display: block; border: 2px solid #FF0000; padding: 2px; background-color:#FFF0F0; font-weight: normal;   -webkit-border-radius:5px;  -webkit-box-shadow:1px 1px 7px #000; position: absolute; top: -1em; left:10em; z-index: 1 } 
+ .macro { color: darkmagenta; background-color:LemonChiffon; position: relative }
+ .num { width:2.5em; padding-right:2ex; background-color:#eeeeee }
+ .num { text-align:right; font-size:8pt }
+ .num { color:#444444 }
+ .line { padding-left: 1ex; border-left: 3px solid #ccc }
+ .line { white-space: pre }
+ .msg { -webkit-box-shadow:1px 1px 7px #000 }
+ .msg { -webkit-border-radius:5px }
+ .msg { font-family:Helvetica, sans-serif; font-size:8pt }
+ .msg { float:left }
+ .msg { padding:0.25em 1ex 0.25em 1ex }
+ .msg { margin-top:10px; margin-bottom:10px }
+ .msg { font-weight:bold }
+ .msg { max-width:60em; word-wrap: break-word; white-space: pre-wrap }
+ .msgT { padding:0x; spacing:0x }
+ .msgEvent { background-color:#fff8b4; color:#000000 }
+ .msgControl { background-color:#bbbbbb; color:#000000 }
+ .mrange { background-color:#dfddf3 }
+ .mrange { border-bottom:1px solid #6F9DBE }
+ .PathIndex { font-weight: bold; padding:0px 5px; margin-right:5px; }
+ .PathIndex { -webkit-border-radius:8px }
+ .PathIndexEvent { background-color:#bfba87 }
+ .PathIndexControl { background-color:#8c8c8c }
+ .PathNav a { text-decoration:none; font-size: larger }
+ .CodeInsertionHint { font-weight: bold; background-color: #10dd10 }
+ .CodeRemovalHint { background-color:#de1010 }
+ .CodeRemovalHint { border-bottom:1px solid #6F9DBE }
+ table.simpletable {
+   padding: 5px;
+   font-size:12pt;
+   margin:20px;
+   border-collapse: collapse; border-spacing: 0px;
+ }
+ td.rowname {
+   text-align:right; font-weight:bold; color:#444444;
+   padding-right:2ex; }
+</style>
+</head>
+<body>
+<!-- BUGDESC Access to field 'next' results in a dereference of a null pointer (loaded from field 'trie') -->
+
+<!-- BUGTYPE Dereference of null pointer -->
+
+<!-- BUGCATEGORY Logic error -->
+
+<!-- BUGFILE /Users/lars/Code/git/kwset.c -->
+
+<!-- FILENAME kwset.c -->
+
+<!-- FUNCTIONNAME kwsprep -->
+
+<!-- ISSUEHASHCONTENTOFLINEINCONTEXT e9f00ef00765bf2882ac17dcb9842858 -->
+
+<!-- BUGLINE 462 -->
+
+<!-- BUGCOLUMN 19 -->
+
+<!-- BUGPATHLENGTH 3 -->
+
+<!-- BUGMETAEND -->
+<!-- REPORTHEADER -->
+<h3>Bug Summary</h3>
+<table class="simpletable">
+<tr><td class="rowname">File:</td><td>kwset.c</td></tr>
+<tr><td class="rowname">Location:</td><td><a href="#EndPath">line 462, column 19</a></td></tr>
+<tr><td class="rowname">Description:</td><td>Access to field 'next' results in a dereference of a null pointer (loaded from field 'trie')</td></tr>
+</table>
+<!-- REPORTSUMMARYEXTRA -->
+<h3>Annotated Source Code</h3>
+<table class="code">
+<tr><td class="num" id="LN1">1</td><td class="line"><span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN2">2</td><td class="line"> <span class='comment'>* This file has been copied from commit e7ac713d^ in the GNU grep git</span></td></tr>
+<tr><td class="num" id="LN3">3</td><td class="line"> <span class='comment'>* repository. A few small changes have been made to adapt the code to</span></td></tr>
+<tr><td class="num" id="LN4">4</td><td class="line"> <span class='comment'>* Git.</span></td></tr>
+<tr><td class="num" id="LN5">5</td><td class="line"> <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN6">6</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN7">7</td><td class="line"><span class='comment'>/* kwset.c - search for any of a set of keywords.</span></td></tr>
+<tr><td class="num" id="LN8">8</td><td class="line">   <span class='comment'>Copyright 1989, 1998, 2000, 2005 Free Software Foundation, Inc.</span></td></tr>
+<tr><td class="num" id="LN9">9</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN10">10</td><td class="line">   <span class='comment'>This program is free software; you can redistribute it and/or modify</span></td></tr>
+<tr><td class="num" id="LN11">11</td><td class="line">   <span class='comment'>it under the terms of the GNU General Public License as published by</span></td></tr>
+<tr><td class="num" id="LN12">12</td><td class="line">   <span class='comment'>the Free Software Foundation; either version 2, or (at your option)</span></td></tr>
+<tr><td class="num" id="LN13">13</td><td class="line">   <span class='comment'>any later version.</span></td></tr>
+<tr><td class="num" id="LN14">14</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN15">15</td><td class="line">   <span class='comment'>This program is distributed in the hope that it will be useful,</span></td></tr>
+<tr><td class="num" id="LN16">16</td><td class="line">   <span class='comment'>but WITHOUT ANY WARRANTY; without even the implied warranty of</span></td></tr>
+<tr><td class="num" id="LN17">17</td><td class="line">   <span class='comment'>MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span></td></tr>
+<tr><td class="num" id="LN18">18</td><td class="line">   <span class='comment'>GNU General Public License for more details.</span></td></tr>
+<tr><td class="num" id="LN19">19</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN20">20</td><td class="line">   <span class='comment'>You should have received a copy of the GNU General Public License</span></td></tr>
+<tr><td class="num" id="LN21">21</td><td class="line">   <span class='comment'>along with this program; if not, write to the Free Software</span></td></tr>
+<tr><td class="num" id="LN22">22</td><td class="line">   <span class='comment'>Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA</span></td></tr>
+<tr><td class="num" id="LN23">23</td><td class="line">   <span class='comment'>02110-1301, USA.  */</span></td></tr>
+<tr><td class="num" id="LN24">24</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN25">25</td><td class="line"><span class='comment'>/* Written August 1989 by Mike Haertel.</span></td></tr>
+<tr><td class="num" id="LN26">26</td><td class="line">   <span class='comment'>The author may be reached (Email) at the address mike@ai.mit.edu,</span></td></tr>
+<tr><td class="num" id="LN27">27</td><td class="line">   <span class='comment'>or (US mail) as Mike Haertel c/o Free Software Foundation. */</span></td></tr>
+<tr><td class="num" id="LN28">28</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN29">29</td><td class="line"><span class='comment'>/* The algorithm implemented by these routines bears a startling resemblance</span></td></tr>
+<tr><td class="num" id="LN30">30</td><td class="line">   <span class='comment'>to one discovered by Beate Commentz-Walter, although it is not identical.</span></td></tr>
+<tr><td class="num" id="LN31">31</td><td class="line">   <span class='comment'>See "A String Matching Algorithm Fast on the Average," Technical Report,</span></td></tr>
+<tr><td class="num" id="LN32">32</td><td class="line">   <span class='comment'>IBM-Germany, Scientific Center Heidelberg, Tiergartenstrasse 15, D-6900</span></td></tr>
+<tr><td class="num" id="LN33">33</td><td class="line">   <span class='comment'>Heidelberg, Germany.  See also Aho, A.V., and M. Corasick, "Efficient</span></td></tr>
+<tr><td class="num" id="LN34">34</td><td class="line">   <span class='comment'>String Matching:  An Aid to Bibliographic Search," CACM June 1975,</span></td></tr>
+<tr><td class="num" id="LN35">35</td><td class="line">   <span class='comment'>Vol. 18, No. 6, which describes the failure function used below. */</span></td></tr>
+<tr><td class="num" id="LN36">36</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN37">37</td><td class="line"><span class='directive'>#include "cache.h"</span></td></tr>
+<tr><td class="num" id="LN38">38</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN39">39</td><td class="line"><span class='directive'>#include "kwset.h"</span></td></tr>
+<tr><td class="num" id="LN40">40</td><td class="line"><span class='directive'>#include "compat/obstack.h"</span></td></tr>
+<tr><td class="num" id="LN41">41</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN42">42</td><td class="line"><span class='directive'>#define <span class='macro'>NCHAR<span class='expansion'>((127*2 +1) + 1)</span></span> (<span class='macro'>UCHAR_MAX<span class='expansion'>(127*2 +1)</span></span> + 1)</span></td></tr>
+<tr><td class="num" id="LN43">43</td><td class="line"><span class='directive'>#define <span class='macro'>obstack_chunk_alloc<span class='expansion'>xmalloc</span></span> xmalloc</span></td></tr>
+<tr><td class="num" id="LN44">44</td><td class="line"><span class='directive'>#define <span class='macro'>obstack_chunk_free<span class='expansion'>free</span></span> free</span></td></tr>
+<tr><td class="num" id="LN45">45</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN46">46</td><td class="line"><span class='directive'>#define <span class='macro'>U(c)<span class='expansion'>((unsigned char) (c))</span></span> ((unsigned char) (c))</span></td></tr>
+<tr><td class="num" id="LN47">47</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN48">48</td><td class="line"><span class='comment'>/* Balanced tree of edges and labels leaving a given trie node. */</span></td></tr>
+<tr><td class="num" id="LN49">49</td><td class="line"><span class='keyword'>struct</span> tree</td></tr>
+<tr><td class="num" id="LN50">50</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN51">51</td><td class="line">  <span class='keyword'>struct</span> tree *llink;		<span class='comment'>/* Left link; MUST be first field. */</span></td></tr>
+<tr><td class="num" id="LN52">52</td><td class="line">  <span class='keyword'>struct</span> tree *rlink;		<span class='comment'>/* Right link (to larger labels). */</span></td></tr>
+<tr><td class="num" id="LN53">53</td><td class="line">  <span class='keyword'>struct</span> trie *trie;		<span class='comment'>/* Trie node pointed to by this edge. */</span></td></tr>
+<tr><td class="num" id="LN54">54</td><td class="line">  <span class='keyword'>unsigned</span> <span class='keyword'>char</span> label;		<span class='comment'>/* Label on this edge. */</span></td></tr>
+<tr><td class="num" id="LN55">55</td><td class="line">  <span class='keyword'>char</span> balance;			<span class='comment'>/* Difference in depths of subtrees. */</span></td></tr>
+<tr><td class="num" id="LN56">56</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN57">57</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN58">58</td><td class="line"><span class='comment'>/* Node of a trie representing a set of reversed keywords. */</span></td></tr>
+<tr><td class="num" id="LN59">59</td><td class="line"><span class='keyword'>struct</span> trie</td></tr>
+<tr><td class="num" id="LN60">60</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN61">61</td><td class="line">  <span class='keyword'>unsigned</span> <span class='keyword'>int</span> accepting;	<span class='comment'>/* Word index of accepted word, or zero. */</span></td></tr>
+<tr><td class="num" id="LN62">62</td><td class="line">  <span class='keyword'>struct</span> tree *links;		<span class='comment'>/* Tree of edges leaving this node. */</span></td></tr>
+<tr><td class="num" id="LN63">63</td><td class="line">  <span class='keyword'>struct</span> trie *parent;		<span class='comment'>/* Parent of this node. */</span></td></tr>
+<tr><td class="num" id="LN64">64</td><td class="line">  <span class='keyword'>struct</span> trie *next;		<span class='comment'>/* List of all trie nodes in level order. */</span></td></tr>
+<tr><td class="num" id="LN65">65</td><td class="line">  <span class='keyword'>struct</span> trie *fail;		<span class='comment'>/* Aho-Corasick failure function. */</span></td></tr>
+<tr><td class="num" id="LN66">66</td><td class="line">  <span class='keyword'>int</span> depth;			<span class='comment'>/* Depth of this node from the root. */</span></td></tr>
+<tr><td class="num" id="LN67">67</td><td class="line">  <span class='keyword'>int</span> shift;			<span class='comment'>/* Shift function for search failures. */</span></td></tr>
+<tr><td class="num" id="LN68">68</td><td class="line">  <span class='keyword'>int</span> maxshift;			<span class='comment'>/* Max shift of self and descendants. */</span></td></tr>
+<tr><td class="num" id="LN69">69</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN70">70</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN71">71</td><td class="line"><span class='comment'>/* Structure returned opaquely to the caller, containing everything. */</span></td></tr>
+<tr><td class="num" id="LN72">72</td><td class="line"><span class='keyword'>struct</span> kwset</td></tr>
+<tr><td class="num" id="LN73">73</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN74">74</td><td class="line">  <span class='keyword'>struct</span> obstack obstack;	<span class='comment'>/* Obstack for node allocation. */</span></td></tr>
+<tr><td class="num" id="LN75">75</td><td class="line">  <span class='keyword'>int</span> words;			<span class='comment'>/* Number of words in the trie. */</span></td></tr>
+<tr><td class="num" id="LN76">76</td><td class="line">  <span class='keyword'>struct</span> trie *trie;		<span class='comment'>/* The trie itself. */</span></td></tr>
+<tr><td class="num" id="LN77">77</td><td class="line">  <span class='keyword'>int</span> mind;			<span class='comment'>/* Minimum depth of an accepting node. */</span></td></tr>
+<tr><td class="num" id="LN78">78</td><td class="line">  <span class='keyword'>int</span> maxd;			<span class='comment'>/* Maximum depth of any node. */</span></td></tr>
+<tr><td class="num" id="LN79">79</td><td class="line">  <span class='keyword'>unsigned</span> <span class='keyword'>char</span> delta[<span class='macro'>NCHAR<span class='expansion'>((127*2 +1) + 1)</span></span>];	<span class='comment'>/* Delta table for rapid search. */</span></td></tr>
+<tr><td class="num" id="LN80">80</td><td class="line">  <span class='keyword'>struct</span> trie *next[<span class='macro'>NCHAR<span class='expansion'>((127*2 +1) + 1)</span></span>];	<span class='comment'>/* Table of children of the root. */</span></td></tr>
+<tr><td class="num" id="LN81">81</td><td class="line">  <span class='keyword'>char</span> *target;			<span class='comment'>/* Target string if there's only one. */</span></td></tr>
+<tr><td class="num" id="LN82">82</td><td class="line">  <span class='keyword'>int</span> mind2;			<span class='comment'>/* Used in Boyer-Moore search for one string. */</span></td></tr>
+<tr><td class="num" id="LN83">83</td><td class="line">  <span class='keyword'>unsigned</span> <span class='keyword'>char</span> <span class='keyword'>const</span> *trans;  <span class='comment'>/* Character translation table. */</span></td></tr>
+<tr><td class="num" id="LN84">84</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN85">85</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN86">86</td><td class="line"><span class='comment'>/* Allocate and initialize a keyword set object, returning an opaque</span></td></tr>
+<tr><td class="num" id="LN87">87</td><td class="line">   <span class='comment'>pointer to it.  Return NULL if memory is not available. */</span></td></tr>
+<tr><td class="num" id="LN88">88</td><td class="line">kwset_t</td></tr>
+<tr><td class="num" id="LN89">89</td><td class="line">kwsalloc (<span class='keyword'>unsigned</span> <span class='keyword'>char</span> <span class='keyword'>const</span> *trans)</td></tr>
+<tr><td class="num" id="LN90">90</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN91">91</td><td class="line">  <span class='keyword'>struct</span> kwset *kwset;</td></tr>
+<tr><td class="num" id="LN92">92</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN93">93</td><td class="line">  kwset = (<span class='keyword'>struct</span> kwset *) xmalloc(<span class='keyword'>sizeof</span> (<span class='keyword'>struct</span> kwset));</td></tr>
+<tr><td class="num" id="LN94">94</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN95">95</td><td class="line">  <span class='macro'>obstack_init(&amp;kwset-&gt;obstack)<span class='expansion'>_obstack_begin ((&amp;kwset-&gt;obstack), 0, 0, (void *(*) (long<br>)) xmalloc, (void (*) (void *)) free)</span></span>;</td></tr>
+<tr><td class="num" id="LN96">96</td><td class="line">  kwset-&gt;words = 0;</td></tr>
+<tr><td class="num" id="LN97">97</td><td class="line">  kwset-&gt;trie</td></tr>
+<tr><td class="num" id="LN98">98</td><td class="line">    = (<span class='keyword'>struct</span> trie *) <span class='macro'>obstack_alloc(&amp;kwset-&gt;obstack, <span class='keyword'>sizeof</span> (<span class='keyword'>struct</span> trie))<span class='expansion'>__extension__ ({ struct obstack *__h = (&amp;kwset-&gt;obstack<br>); __extension__ ({ struct obstack *__o = (__h); int __len = (<br>(sizeof (struct trie))); if (__o-&gt;chunk_limit - __o-&gt;next_free<br> &lt; __len) _obstack_newchunk (__o, __len); ((__o)-&gt;next_free<br> += (__len)); (void) 0; }); __extension__ ({ struct obstack *<br>__o1 = (__h); void *__value = (void *) __o1-&gt;object_base; if<br> (__o1-&gt;next_free == __value) __o1-&gt;maybe_empty_object =<br> 1; __o1-&gt;next_free = ((sizeof (long int) &lt; sizeof (void<br> *) ? (__o1-&gt;object_base) : (char *) 0) + (((__o1-&gt;next_free<br>) - (sizeof (long int) &lt; sizeof (void *) ? (__o1-&gt;object_base<br>) : (char *) 0) + (__o1-&gt;alignment_mask)) &amp; ~(__o1-&gt;<br>alignment_mask))); if (__o1-&gt;next_free - (char *)__o1-&gt;<br>chunk &gt; __o1-&gt;chunk_limit - (char *)__o1-&gt;chunk) __o1<br>-&gt;next_free = __o1-&gt;chunk_limit; __o1-&gt;object_base =<br> __o1-&gt;next_free; __value; }); })</span></span>;</td></tr>
+<tr><td class="num" id="LN99">99</td><td class="line">  <span class='keyword'>if</span> (!kwset-&gt;trie)</td></tr>
+<tr><td class="num" id="LN100">100</td><td class="line">    {</td></tr>
+<tr><td class="num" id="LN101">101</td><td class="line">      kwsfree((kwset_t) kwset);</td></tr>
+<tr><td class="num" id="LN102">102</td><td class="line">      <span class='keyword'>return</span> <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN103">103</td><td class="line">    }</td></tr>
+<tr><td class="num" id="LN104">104</td><td class="line">  kwset-&gt;trie-&gt;accepting = 0;</td></tr>
+<tr><td class="num" id="LN105">105</td><td class="line">  kwset-&gt;trie-&gt;links = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN106">106</td><td class="line">  kwset-&gt;trie-&gt;parent = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN107">107</td><td class="line">  kwset-&gt;trie-&gt;next = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN108">108</td><td class="line">  kwset-&gt;trie-&gt;fail = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN109">109</td><td class="line">  kwset-&gt;trie-&gt;depth = 0;</td></tr>
+<tr><td class="num" id="LN110">110</td><td class="line">  kwset-&gt;trie-&gt;shift = 0;</td></tr>
+<tr><td class="num" id="LN111">111</td><td class="line">  kwset-&gt;mind = <span class='macro'>INT_MAX<span class='expansion'>2147483647</span></span>;</td></tr>
+<tr><td class="num" id="LN112">112</td><td class="line">  kwset-&gt;maxd = -1;</td></tr>
+<tr><td class="num" id="LN113">113</td><td class="line">  kwset-&gt;target = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN114">114</td><td class="line">  kwset-&gt;trans = trans;</td></tr>
+<tr><td class="num" id="LN115">115</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN116">116</td><td class="line">  <span class='keyword'>return</span> (kwset_t) kwset;</td></tr>
+<tr><td class="num" id="LN117">117</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN118">118</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN119">119</td><td class="line"><span class='comment'>/* This upper bound is valid for CHAR_BIT &gt;= 4 and</span></td></tr>
+<tr><td class="num" id="LN120">120</td><td class="line">   <span class='comment'>exact for CHAR_BIT in { 4..11, 13, 15, 17, 19 }. */</span></td></tr>
+<tr><td class="num" id="LN121">121</td><td class="line"><span class='directive'>#define <span class='macro'>DEPTH_SIZE<span class='expansion'>(8 + 8/2)</span></span> (<span class='macro'>CHAR_BIT<span class='expansion'>8</span></span> + <span class='macro'>CHAR_BIT<span class='expansion'>8</span></span>/2)</span></td></tr>
+<tr><td class="num" id="LN122">122</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN123">123</td><td class="line"><span class='comment'>/* Add the given string to the contents of the keyword set.  Return NULL</span></td></tr>
+<tr><td class="num" id="LN124">124</td><td class="line">   <span class='comment'>for success, an error message otherwise. */</span></td></tr>
+<tr><td class="num" id="LN125">125</td><td class="line"><span class='keyword'>const</span> <span class='keyword'>char</span> *</td></tr>
+<tr><td class="num" id="LN126">126</td><td class="line">kwsincr (kwset_t kws, <span class='keyword'>char</span> <span class='keyword'>const</span> *text, size_t len)</td></tr>
+<tr><td class="num" id="LN127">127</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN128">128</td><td class="line">  <span class='keyword'>struct</span> kwset *kwset;</td></tr>
+<tr><td class="num" id="LN129">129</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>struct</span> trie *trie;</td></tr>
+<tr><td class="num" id="LN130">130</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> label;</td></tr>
+<tr><td class="num" id="LN131">131</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>struct</span> tree *link;</td></tr>
+<tr><td class="num" id="LN132">132</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>int</span> depth;</td></tr>
+<tr><td class="num" id="LN133">133</td><td class="line">  <span class='keyword'>struct</span> tree *links[<span class='macro'>DEPTH_SIZE<span class='expansion'>(8 + 8/2)</span></span>];</td></tr>
+<tr><td class="num" id="LN134">134</td><td class="line">  <span class='keyword'>enum</span> { L, R } dirs[<span class='macro'>DEPTH_SIZE<span class='expansion'>(8 + 8/2)</span></span>];</td></tr>
+<tr><td class="num" id="LN135">135</td><td class="line">  <span class='keyword'>struct</span> tree *t, *r, *l, *rl, *lr;</td></tr>
+<tr><td class="num" id="LN136">136</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN137">137</td><td class="line">  kwset = (<span class='keyword'>struct</span> kwset *) kws;</td></tr>
+<tr><td class="num" id="LN138">138</td><td class="line">  trie = kwset-&gt;trie;</td></tr>
+<tr><td class="num" id="LN139">139</td><td class="line">  text += len;</td></tr>
+<tr><td class="num" id="LN140">140</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN141">141</td><td class="line">  <span class='comment'>/* Descend the trie (built of reversed keywords) character-by-character,</span></td></tr>
+<tr><td class="num" id="LN142">142</td><td class="line">     <span class='comment'>installing new nodes when necessary. */</span></td></tr>
+<tr><td class="num" id="LN143">143</td><td class="line">  <span class='keyword'>while</span> (len--)</td></tr>
+<tr><td class="num" id="LN144">144</td><td class="line">    {</td></tr>
+<tr><td class="num" id="LN145">145</td><td class="line">      label = kwset-&gt;trans ? kwset-&gt;trans[<span class='macro'>U(*--text)<span class='expansion'>((unsigned char) (*--text))</span></span>] : *--text;</td></tr>
+<tr><td class="num" id="LN146">146</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN147">147</td><td class="line">      <span class='comment'>/* Descend the tree of outgoing links for this trie node,</span></td></tr>
+<tr><td class="num" id="LN148">148</td><td class="line">	 <span class='comment'>looking for the current character and keeping track</span></td></tr>
+<tr><td class="num" id="LN149">149</td><td class="line">	 <span class='comment'>of the path followed. */</span></td></tr>
+<tr><td class="num" id="LN150">150</td><td class="line">      link = trie-&gt;links;</td></tr>
+<tr><td class="num" id="LN151">151</td><td class="line">      links[0] = (<span class='keyword'>struct</span> tree *) &amp;trie-&gt;links;</td></tr>
+<tr><td class="num" id="LN152">152</td><td class="line">      dirs[0] = L;</td></tr>
+<tr><td class="num" id="LN153">153</td><td class="line">      depth = 1;</td></tr>
+<tr><td class="num" id="LN154">154</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN155">155</td><td class="line">      <span class='keyword'>while</span> (link &amp;&amp; label != link-&gt;label)</td></tr>
+<tr><td class="num" id="LN156">156</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN157">157</td><td class="line">	  links[depth] = link;</td></tr>
+<tr><td class="num" id="LN158">158</td><td class="line">	  <span class='keyword'>if</span> (label &lt; link-&gt;label)</td></tr>
+<tr><td class="num" id="LN159">159</td><td class="line">	    dirs[depth++] = L, link = link-&gt;llink;</td></tr>
+<tr><td class="num" id="LN160">160</td><td class="line">	  <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN161">161</td><td class="line">	    dirs[depth++] = R, link = link-&gt;rlink;</td></tr>
+<tr><td class="num" id="LN162">162</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN163">163</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN164">164</td><td class="line">      <span class='comment'>/* The current character doesn't have an outgoing link at</span></td></tr>
+<tr><td class="num" id="LN165">165</td><td class="line">	 <span class='comment'>this trie node, so build a new trie node and install</span></td></tr>
+<tr><td class="num" id="LN166">166</td><td class="line">	 <span class='comment'>a link in the current trie node's tree. */</span></td></tr>
+<tr><td class="num" id="LN167">167</td><td class="line">      <span class='keyword'>if</span> (!link)</td></tr>
+<tr><td class="num" id="LN168">168</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN169">169</td><td class="line">	  link = (<span class='keyword'>struct</span> tree *) <span class='macro'>obstack_alloc(&amp;kwset-&gt;obstack,<span class='expansion'>__extension__ ({ struct obstack *__h = (&amp;kwset-&gt;obstack<br>); __extension__ ({ struct obstack *__o = (__h); int __len = (<br>(sizeof (struct tree))); if (__o-&gt;chunk_limit - __o-&gt;next_free<br> &lt; __len) _obstack_newchunk (__o, __len); ((__o)-&gt;next_free<br> += (__len)); (void) 0; }); __extension__ ({ struct obstack *<br>__o1 = (__h); void *__value = (void *) __o1-&gt;object_base; if<br> (__o1-&gt;next_free == __value) __o1-&gt;maybe_empty_object =<br> 1; __o1-&gt;next_free = ((sizeof (long int) &lt; sizeof (void<br> *) ? (__o1-&gt;object_base) : (char *) 0) + (((__o1-&gt;next_free<br>) - (sizeof (long int) &lt; sizeof (void *) ? (__o1-&gt;object_base<br>) : (char *) 0) + (__o1-&gt;alignment_mask)) &amp; ~(__o1-&gt;<br>alignment_mask))); if (__o1-&gt;next_free - (char *)__o1-&gt;<br>chunk &gt; __o1-&gt;chunk_limit - (char *)__o1-&gt;chunk) __o1<br>-&gt;next_free = __o1-&gt;chunk_limit; __o1-&gt;object_base =<br> __o1-&gt;next_free; __value; }); })</span></span></td></tr>
+<tr><td class="num" id="LN170">170</td><td class="line">					       <span class='keyword'><span class='macro'>sizeof</span> (<span class='keyword'>struct</span> tree))<span class='expansion'>__extension__ ({ struct obstack *__h = (&amp;kwset-&gt;obstack<br>); __extension__ ({ struct obstack *__o = (__h); int __len = (<br>(sizeof (struct tree))); if (__o-&gt;chunk_limit - __o-&gt;next_free<br> &lt; __len) _obstack_newchunk (__o, __len); ((__o)-&gt;next_free<br> += (__len)); (void) 0; }); __extension__ ({ struct obstack *<br>__o1 = (__h); void *__value = (void *) __o1-&gt;object_base; if<br> (__o1-&gt;next_free == __value) __o1-&gt;maybe_empty_object =<br> 1; __o1-&gt;next_free = ((sizeof (long int) &lt; sizeof (void<br> *) ? (__o1-&gt;object_base) : (char *) 0) + (((__o1-&gt;next_free<br>) - (sizeof (long int) &lt; sizeof (void *) ? (__o1-&gt;object_base<br>) : (char *) 0) + (__o1-&gt;alignment_mask)) &amp; ~(__o1-&gt;<br>alignment_mask))); if (__o1-&gt;next_free - (char *)__o1-&gt;<br>chunk &gt; __o1-&gt;chunk_limit - (char *)__o1-&gt;chunk) __o1<br>-&gt;next_free = __o1-&gt;chunk_limit; __o1-&gt;object_base =<br> __o1-&gt;next_free; __value; }); })</span></span>;</td></tr>
+<tr><td class="num" id="LN171">171</td><td class="line">	  <span class='keyword'>if</span> (!link)</td></tr>
+<tr><td class="num" id="LN172">172</td><td class="line">	    <span class='keyword'>return</span> <span class='string_literal'>"memory exhausted"</span>;</td></tr>
+<tr><td class="num" id="LN173">173</td><td class="line">	  link-&gt;llink = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN174">174</td><td class="line">	  link-&gt;rlink = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN175">175</td><td class="line">	  link-&gt;trie = (<span class='keyword'>struct</span> trie *) <span class='macro'>obstack_alloc(&amp;kwset-&gt;obstack,<span class='expansion'>__extension__ ({ struct obstack *__h = (&amp;kwset-&gt;obstack<br>); __extension__ ({ struct obstack *__o = (__h); int __len = (<br>(sizeof (struct trie))); if (__o-&gt;chunk_limit - __o-&gt;next_free<br> &lt; __len) _obstack_newchunk (__o, __len); ((__o)-&gt;next_free<br> += (__len)); (void) 0; }); __extension__ ({ struct obstack *<br>__o1 = (__h); void *__value = (void *) __o1-&gt;object_base; if<br> (__o1-&gt;next_free == __value) __o1-&gt;maybe_empty_object =<br> 1; __o1-&gt;next_free = ((sizeof (long int) &lt; sizeof (void<br> *) ? (__o1-&gt;object_base) : (char *) 0) + (((__o1-&gt;next_free<br>) - (sizeof (long int) &lt; sizeof (void *) ? (__o1-&gt;object_base<br>) : (char *) 0) + (__o1-&gt;alignment_mask)) &amp; ~(__o1-&gt;<br>alignment_mask))); if (__o1-&gt;next_free - (char *)__o1-&gt;<br>chunk &gt; __o1-&gt;chunk_limit - (char *)__o1-&gt;chunk) __o1<br>-&gt;next_free = __o1-&gt;chunk_limit; __o1-&gt;object_base =<br> __o1-&gt;next_free; __value; }); })</span></span></td></tr>
+<tr><td class="num" id="LN176">176</td><td class="line">						     <span class='keyword'><span class='macro'>sizeof</span> (<span class='keyword'>struct</span> trie))<span class='expansion'>__extension__ ({ struct obstack *__h = (&amp;kwset-&gt;obstack<br>); __extension__ ({ struct obstack *__o = (__h); int __len = (<br>(sizeof (struct trie))); if (__o-&gt;chunk_limit - __o-&gt;next_free<br> &lt; __len) _obstack_newchunk (__o, __len); ((__o)-&gt;next_free<br> += (__len)); (void) 0; }); __extension__ ({ struct obstack *<br>__o1 = (__h); void *__value = (void *) __o1-&gt;object_base; if<br> (__o1-&gt;next_free == __value) __o1-&gt;maybe_empty_object =<br> 1; __o1-&gt;next_free = ((sizeof (long int) &lt; sizeof (void<br> *) ? (__o1-&gt;object_base) : (char *) 0) + (((__o1-&gt;next_free<br>) - (sizeof (long int) &lt; sizeof (void *) ? (__o1-&gt;object_base<br>) : (char *) 0) + (__o1-&gt;alignment_mask)) &amp; ~(__o1-&gt;<br>alignment_mask))); if (__o1-&gt;next_free - (char *)__o1-&gt;<br>chunk &gt; __o1-&gt;chunk_limit - (char *)__o1-&gt;chunk) __o1<br>-&gt;next_free = __o1-&gt;chunk_limit; __o1-&gt;object_base =<br> __o1-&gt;next_free; __value; }); })</span></span>;</td></tr>
+<tr><td class="num" id="LN177">177</td><td class="line">	  <span class='keyword'>if</span> (!link-&gt;trie)</td></tr>
+<tr><td class="num" id="LN178">178</td><td class="line">	    {</td></tr>
+<tr><td class="num" id="LN179">179</td><td class="line">	      <span class='macro'>obstack_free(&amp;kwset-&gt;obstack, link)<span class='expansion'>__extension__ ({ struct obstack *__o = (&amp;kwset-&gt;obstack<br>); void *__obj = (link); if (__obj &gt; (void *)__o-&gt;chunk<br> &amp;&amp; __obj &lt; (void *)__o-&gt;chunk_limit) __o-&gt;next_free<br> = __o-&gt;object_base = (char *)__obj; else (obstack_free) (<br>__o, __obj); })</span></span>;</td></tr>
+<tr><td class="num" id="LN180">180</td><td class="line">	      <span class='keyword'>return</span> <span class='string_literal'>"memory exhausted"</span>;</td></tr>
+<tr><td class="num" id="LN181">181</td><td class="line">	    }</td></tr>
+<tr><td class="num" id="LN182">182</td><td class="line">	  link-&gt;trie-&gt;accepting = 0;</td></tr>
+<tr><td class="num" id="LN183">183</td><td class="line">	  link-&gt;trie-&gt;links = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN184">184</td><td class="line">	  link-&gt;trie-&gt;parent = trie;</td></tr>
+<tr><td class="num" id="LN185">185</td><td class="line">	  link-&gt;trie-&gt;next = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN186">186</td><td class="line">	  link-&gt;trie-&gt;fail = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN187">187</td><td class="line">	  link-&gt;trie-&gt;depth = trie-&gt;depth + 1;</td></tr>
+<tr><td class="num" id="LN188">188</td><td class="line">	  link-&gt;trie-&gt;shift = 0;</td></tr>
+<tr><td class="num" id="LN189">189</td><td class="line">	  link-&gt;label = label;</td></tr>
+<tr><td class="num" id="LN190">190</td><td class="line">	  link-&gt;balance = 0;</td></tr>
+<tr><td class="num" id="LN191">191</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN192">192</td><td class="line">	  <span class='comment'>/* Install the new tree node in its parent. */</span></td></tr>
+<tr><td class="num" id="LN193">193</td><td class="line">	  <span class='keyword'>if</span> (dirs[--depth] == L)</td></tr>
+<tr><td class="num" id="LN194">194</td><td class="line">	    links[depth]-&gt;llink = link;</td></tr>
+<tr><td class="num" id="LN195">195</td><td class="line">	  <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN196">196</td><td class="line">	    links[depth]-&gt;rlink = link;</td></tr>
+<tr><td class="num" id="LN197">197</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN198">198</td><td class="line">	  <span class='comment'>/* Back up the tree fixing the balance flags. */</span></td></tr>
+<tr><td class="num" id="LN199">199</td><td class="line">	  <span class='keyword'>while</span> (depth &amp;&amp; !links[depth]-&gt;balance)</td></tr>
+<tr><td class="num" id="LN200">200</td><td class="line">	    {</td></tr>
+<tr><td class="num" id="LN201">201</td><td class="line">	      <span class='keyword'>if</span> (dirs[depth] == L)</td></tr>
+<tr><td class="num" id="LN202">202</td><td class="line">		--links[depth]-&gt;balance;</td></tr>
+<tr><td class="num" id="LN203">203</td><td class="line">	      <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN204">204</td><td class="line">		++links[depth]-&gt;balance;</td></tr>
+<tr><td class="num" id="LN205">205</td><td class="line">	      --depth;</td></tr>
+<tr><td class="num" id="LN206">206</td><td class="line">	    }</td></tr>
+<tr><td class="num" id="LN207">207</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN208">208</td><td class="line">	  <span class='comment'>/* Rebalance the tree by pointer rotations if necessary. */</span></td></tr>
+<tr><td class="num" id="LN209">209</td><td class="line">	  <span class='keyword'>if</span> (depth &amp;&amp; ((dirs[depth] == L &amp;&amp; --links[depth]-&gt;balance)</td></tr>
+<tr><td class="num" id="LN210">210</td><td class="line">			|| (dirs[depth] == R &amp;&amp; ++links[depth]-&gt;balance)))</td></tr>
+<tr><td class="num" id="LN211">211</td><td class="line">	    {</td></tr>
+<tr><td class="num" id="LN212">212</td><td class="line">	      <span class='keyword'>switch</span> (links[depth]-&gt;balance)</td></tr>
+<tr><td class="num" id="LN213">213</td><td class="line">		{</td></tr>
+<tr><td class="num" id="LN214">214</td><td class="line">		<span class='keyword'>case</span> (<span class='keyword'>char</span>) -2:</td></tr>
+<tr><td class="num" id="LN215">215</td><td class="line">		  <span class='keyword'>switch</span> (dirs[depth + 1])</td></tr>
+<tr><td class="num" id="LN216">216</td><td class="line">		    {</td></tr>
+<tr><td class="num" id="LN217">217</td><td class="line">		    <span class='keyword'>case</span> L:</td></tr>
+<tr><td class="num" id="LN218">218</td><td class="line">		      r = links[depth], t = r-&gt;llink, rl = t-&gt;rlink;</td></tr>
+<tr><td class="num" id="LN219">219</td><td class="line">		      t-&gt;rlink = r, r-&gt;llink = rl;</td></tr>
+<tr><td class="num" id="LN220">220</td><td class="line">		      t-&gt;balance = r-&gt;balance = 0;</td></tr>
+<tr><td class="num" id="LN221">221</td><td class="line">		      <span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN222">222</td><td class="line">		    <span class='keyword'>case</span> R:</td></tr>
+<tr><td class="num" id="LN223">223</td><td class="line">		      r = links[depth], l = r-&gt;llink, t = l-&gt;rlink;</td></tr>
+<tr><td class="num" id="LN224">224</td><td class="line">		      rl = t-&gt;rlink, lr = t-&gt;llink;</td></tr>
+<tr><td class="num" id="LN225">225</td><td class="line">		      t-&gt;llink = l, l-&gt;rlink = lr, t-&gt;rlink = r, r-&gt;llink = rl;</td></tr>
+<tr><td class="num" id="LN226">226</td><td class="line">		      l-&gt;balance = t-&gt;balance != 1 ? 0 : -1;</td></tr>
+<tr><td class="num" id="LN227">227</td><td class="line">		      r-&gt;balance = t-&gt;balance != (<span class='keyword'>char</span>) -1 ? 0 : 1;</td></tr>
+<tr><td class="num" id="LN228">228</td><td class="line">		      t-&gt;balance = 0;</td></tr>
+<tr><td class="num" id="LN229">229</td><td class="line">		      <span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN230">230</td><td class="line">		    <span class='keyword'>default</span>:</td></tr>
+<tr><td class="num" id="LN231">231</td><td class="line">		      abort ();</td></tr>
+<tr><td class="num" id="LN232">232</td><td class="line">		    }</td></tr>
+<tr><td class="num" id="LN233">233</td><td class="line">		  <span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN234">234</td><td class="line">		<span class='keyword'>case</span> 2:</td></tr>
+<tr><td class="num" id="LN235">235</td><td class="line">		  <span class='keyword'>switch</span> (dirs[depth + 1])</td></tr>
+<tr><td class="num" id="LN236">236</td><td class="line">		    {</td></tr>
+<tr><td class="num" id="LN237">237</td><td class="line">		    <span class='keyword'>case</span> R:</td></tr>
+<tr><td class="num" id="LN238">238</td><td class="line">		      l = links[depth], t = l-&gt;rlink, lr = t-&gt;llink;</td></tr>
+<tr><td class="num" id="LN239">239</td><td class="line">		      t-&gt;llink = l, l-&gt;rlink = lr;</td></tr>
+<tr><td class="num" id="LN240">240</td><td class="line">		      t-&gt;balance = l-&gt;balance = 0;</td></tr>
+<tr><td class="num" id="LN241">241</td><td class="line">		      <span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN242">242</td><td class="line">		    <span class='keyword'>case</span> L:</td></tr>
+<tr><td class="num" id="LN243">243</td><td class="line">		      l = links[depth], r = l-&gt;rlink, t = r-&gt;llink;</td></tr>
+<tr><td class="num" id="LN244">244</td><td class="line">		      lr = t-&gt;llink, rl = t-&gt;rlink;</td></tr>
+<tr><td class="num" id="LN245">245</td><td class="line">		      t-&gt;llink = l, l-&gt;rlink = lr, t-&gt;rlink = r, r-&gt;llink = rl;</td></tr>
+<tr><td class="num" id="LN246">246</td><td class="line">		      l-&gt;balance = t-&gt;balance != 1 ? 0 : -1;</td></tr>
+<tr><td class="num" id="LN247">247</td><td class="line">		      r-&gt;balance = t-&gt;balance != (<span class='keyword'>char</span>) -1 ? 0 : 1;</td></tr>
+<tr><td class="num" id="LN248">248</td><td class="line">		      t-&gt;balance = 0;</td></tr>
+<tr><td class="num" id="LN249">249</td><td class="line">		      <span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN250">250</td><td class="line">		    <span class='keyword'>default</span>:</td></tr>
+<tr><td class="num" id="LN251">251</td><td class="line">		      abort ();</td></tr>
+<tr><td class="num" id="LN252">252</td><td class="line">		    }</td></tr>
+<tr><td class="num" id="LN253">253</td><td class="line">		  <span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN254">254</td><td class="line">		<span class='keyword'>default</span>:</td></tr>
+<tr><td class="num" id="LN255">255</td><td class="line">		  abort ();</td></tr>
+<tr><td class="num" id="LN256">256</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN257">257</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN258">258</td><td class="line">	      <span class='keyword'>if</span> (dirs[depth - 1] == L)</td></tr>
+<tr><td class="num" id="LN259">259</td><td class="line">		links[depth - 1]-&gt;llink = t;</td></tr>
+<tr><td class="num" id="LN260">260</td><td class="line">	      <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN261">261</td><td class="line">		links[depth - 1]-&gt;rlink = t;</td></tr>
+<tr><td class="num" id="LN262">262</td><td class="line">	    }</td></tr>
+<tr><td class="num" id="LN263">263</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN264">264</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN265">265</td><td class="line">      trie = link-&gt;trie;</td></tr>
+<tr><td class="num" id="LN266">266</td><td class="line">    }</td></tr>
+<tr><td class="num" id="LN267">267</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN268">268</td><td class="line">  <span class='comment'>/* Mark the node we finally reached as accepting, encoding the</span></td></tr>
+<tr><td class="num" id="LN269">269</td><td class="line">     <span class='comment'>index number of this word in the keyword set so far. */</span></td></tr>
+<tr><td class="num" id="LN270">270</td><td class="line">  <span class='keyword'>if</span> (!trie-&gt;accepting)</td></tr>
+<tr><td class="num" id="LN271">271</td><td class="line">    trie-&gt;accepting = 1 + 2 * kwset-&gt;words;</td></tr>
+<tr><td class="num" id="LN272">272</td><td class="line">  ++kwset-&gt;words;</td></tr>
+<tr><td class="num" id="LN273">273</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN274">274</td><td class="line">  <span class='comment'>/* Keep track of the longest and shortest string of the keyword set. */</span></td></tr>
+<tr><td class="num" id="LN275">275</td><td class="line">  <span class='keyword'>if</span> (trie-&gt;depth &lt; kwset-&gt;mind)</td></tr>
+<tr><td class="num" id="LN276">276</td><td class="line">    kwset-&gt;mind = trie-&gt;depth;</td></tr>
+<tr><td class="num" id="LN277">277</td><td class="line">  <span class='keyword'>if</span> (trie-&gt;depth &gt; kwset-&gt;maxd)</td></tr>
+<tr><td class="num" id="LN278">278</td><td class="line">    kwset-&gt;maxd = trie-&gt;depth;</td></tr>
+<tr><td class="num" id="LN279">279</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN280">280</td><td class="line">  <span class='keyword'>return</span> <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN281">281</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN282">282</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN283">283</td><td class="line"><span class='comment'>/* Enqueue the trie nodes referenced from the given tree in the</span></td></tr>
+<tr><td class="num" id="LN284">284</td><td class="line">   <span class='comment'>given queue. */</span></td></tr>
+<tr><td class="num" id="LN285">285</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span></td></tr>
+<tr><td class="num" id="LN286">286</td><td class="line">enqueue (<span class='keyword'>struct</span> tree *tree, <span class='keyword'>struct</span> trie **last)</td></tr>
+<tr><td class="num" id="LN287">287</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN288">288</td><td class="line">  <span class='keyword'>if</span> (!tree)</td></tr>
+<tr><td class="num" id="LN289">289</td><td class="line">    <span class='keyword'>return</span>;</td></tr>
+<tr><td class="num" id="LN290">290</td><td class="line">  enqueue(tree-&gt;llink, last);</td></tr>
+<tr><td class="num" id="LN291">291</td><td class="line">  enqueue(tree-&gt;rlink, last);</td></tr>
+<tr><td class="num" id="LN292">292</td><td class="line">  (*last) = (*last)-&gt;next = tree-&gt;trie;</td></tr>
+<tr><td class="num" id="LN293">293</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN294">294</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN295">295</td><td class="line"><span class='comment'>/* Compute the Aho-Corasick failure function for the trie nodes referenced</span></td></tr>
+<tr><td class="num" id="LN296">296</td><td class="line">   <span class='comment'>from the given tree, given the failure function for their parent as</span></td></tr>
+<tr><td class="num" id="LN297">297</td><td class="line">   <span class='comment'>well as a last resort failure node. */</span></td></tr>
+<tr><td class="num" id="LN298">298</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span></td></tr>
+<tr><td class="num" id="LN299">299</td><td class="line">treefails (<span class='keyword'>register</span> <span class='keyword'>struct</span> tree <span class='keyword'>const</span> *tree, <span class='keyword'>struct</span> trie <span class='keyword'>const</span> *fail,</td></tr>
+<tr><td class="num" id="LN300">300</td><td class="line">	   <span class='keyword'>struct</span> trie *recourse)</td></tr>
+<tr><td class="num" id="LN301">301</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN302">302</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>struct</span> tree *link;</td></tr>
+<tr><td class="num" id="LN303">303</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN304">304</td><td class="line">  <span class='keyword'>if</span> (!tree)</td></tr>
+<tr><td class="num" id="LN305">305</td><td class="line">    <span class='keyword'>return</span>;</td></tr>
+<tr><td class="num" id="LN306">306</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN307">307</td><td class="line">  treefails(tree-&gt;llink, fail, recourse);</td></tr>
+<tr><td class="num" id="LN308">308</td><td class="line">  treefails(tree-&gt;rlink, fail, recourse);</td></tr>
+<tr><td class="num" id="LN309">309</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN310">310</td><td class="line">  <span class='comment'>/* Find, in the chain of fails going back to the root, the first</span></td></tr>
+<tr><td class="num" id="LN311">311</td><td class="line">     <span class='comment'>node that has a descendant on the current label. */</span></td></tr>
+<tr><td class="num" id="LN312">312</td><td class="line">  <span class='keyword'>while</span> (fail)</td></tr>
+<tr><td class="num" id="LN313">313</td><td class="line">    {</td></tr>
+<tr><td class="num" id="LN314">314</td><td class="line">      link = fail-&gt;links;</td></tr>
+<tr><td class="num" id="LN315">315</td><td class="line">      <span class='keyword'>while</span> (link &amp;&amp; tree-&gt;label != link-&gt;label)</td></tr>
+<tr><td class="num" id="LN316">316</td><td class="line">	<span class='keyword'>if</span> (tree-&gt;label &lt; link-&gt;label)</td></tr>
+<tr><td class="num" id="LN317">317</td><td class="line">	  link = link-&gt;llink;</td></tr>
+<tr><td class="num" id="LN318">318</td><td class="line">	<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN319">319</td><td class="line">	  link = link-&gt;rlink;</td></tr>
+<tr><td class="num" id="LN320">320</td><td class="line">      <span class='keyword'>if</span> (link)</td></tr>
+<tr><td class="num" id="LN321">321</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN322">322</td><td class="line">	  tree-&gt;trie-&gt;fail = link-&gt;trie;</td></tr>
+<tr><td class="num" id="LN323">323</td><td class="line">	  <span class='keyword'>return</span>;</td></tr>
+<tr><td class="num" id="LN324">324</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN325">325</td><td class="line">      fail = fail-&gt;fail;</td></tr>
+<tr><td class="num" id="LN326">326</td><td class="line">    }</td></tr>
+<tr><td class="num" id="LN327">327</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN328">328</td><td class="line">  tree-&gt;trie-&gt;fail = recourse;</td></tr>
+<tr><td class="num" id="LN329">329</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN330">330</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN331">331</td><td class="line"><span class='comment'>/* Set delta entries for the links of the given tree such that</span></td></tr>
+<tr><td class="num" id="LN332">332</td><td class="line">   <span class='comment'>the preexisting delta value is larger than the current depth. */</span></td></tr>
+<tr><td class="num" id="LN333">333</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span></td></tr>
+<tr><td class="num" id="LN334">334</td><td class="line">treedelta (<span class='keyword'>register</span> <span class='keyword'>struct</span> tree <span class='keyword'>const</span> *tree,</td></tr>
+<tr><td class="num" id="LN335">335</td><td class="line">	   <span class='keyword'>register</span> <span class='keyword'>unsigned</span> <span class='keyword'>int</span> depth,</td></tr>
+<tr><td class="num" id="LN336">336</td><td class="line">	   <span class='keyword'>unsigned</span> <span class='keyword'>char</span> delta[])</td></tr>
+<tr><td class="num" id="LN337">337</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN338">338</td><td class="line">  <span class='keyword'>if</span> (!tree)</td></tr>
+<tr><td class="num" id="LN339">339</td><td class="line">    <span class='keyword'>return</span>;</td></tr>
+<tr><td class="num" id="LN340">340</td><td class="line">  treedelta(tree-&gt;llink, depth, delta);</td></tr>
+<tr><td class="num" id="LN341">341</td><td class="line">  treedelta(tree-&gt;rlink, depth, delta);</td></tr>
+<tr><td class="num" id="LN342">342</td><td class="line">  <span class='keyword'>if</span> (depth &lt; delta[tree-&gt;label])</td></tr>
+<tr><td class="num" id="LN343">343</td><td class="line">    delta[tree-&gt;label] = depth;</td></tr>
+<tr><td class="num" id="LN344">344</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN345">345</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN346">346</td><td class="line"><span class='comment'>/* Return true if A has every label in B. */</span></td></tr>
+<tr><td class="num" id="LN347">347</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span></td></tr>
+<tr><td class="num" id="LN348">348</td><td class="line">hasevery (<span class='keyword'>register</span> <span class='keyword'>struct</span> tree <span class='keyword'>const</span> *a, <span class='keyword'>register</span> <span class='keyword'>struct</span> tree <span class='keyword'>const</span> *b)</td></tr>
+<tr><td class="num" id="LN349">349</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN350">350</td><td class="line">  <span class='keyword'>if</span> (!b)</td></tr>
+<tr><td class="num" id="LN351">351</td><td class="line">    <span class='keyword'>return</span> 1;</td></tr>
+<tr><td class="num" id="LN352">352</td><td class="line">  <span class='keyword'>if</span> (!hasevery(a, b-&gt;llink))</td></tr>
+<tr><td class="num" id="LN353">353</td><td class="line">    <span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN354">354</td><td class="line">  <span class='keyword'>if</span> (!hasevery(a, b-&gt;rlink))</td></tr>
+<tr><td class="num" id="LN355">355</td><td class="line">    <span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN356">356</td><td class="line">  <span class='keyword'>while</span> (a &amp;&amp; b-&gt;label != a-&gt;label)</td></tr>
+<tr><td class="num" id="LN357">357</td><td class="line">    <span class='keyword'>if</span> (b-&gt;label &lt; a-&gt;label)</td></tr>
+<tr><td class="num" id="LN358">358</td><td class="line">      a = a-&gt;llink;</td></tr>
+<tr><td class="num" id="LN359">359</td><td class="line">    <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN360">360</td><td class="line">      a = a-&gt;rlink;</td></tr>
+<tr><td class="num" id="LN361">361</td><td class="line">  <span class='keyword'>return</span> !!a;</td></tr>
+<tr><td class="num" id="LN362">362</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN363">363</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN364">364</td><td class="line"><span class='comment'>/* Compute a vector, indexed by character code, of the trie nodes</span></td></tr>
+<tr><td class="num" id="LN365">365</td><td class="line">   <span class='comment'>referenced from the given tree. */</span></td></tr>
+<tr><td class="num" id="LN366">366</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span></td></tr>
+<tr><td class="num" id="LN367">367</td><td class="line">treenext (<span class='keyword'>struct</span> tree <span class='keyword'>const</span> *tree, <span class='keyword'>struct</span> trie *next[])</td></tr>
+<tr><td class="num" id="LN368">368</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN369">369</td><td class="line">  <span class='keyword'>if</span> (!tree)</td></tr>
+<tr><td class="num" id="LN370">370</td><td class="line">    <span class='keyword'>return</span>;</td></tr>
+<tr><td class="num" id="LN371">371</td><td class="line">  treenext(tree-&gt;llink, next);</td></tr>
+<tr><td class="num" id="LN372">372</td><td class="line">  treenext(tree-&gt;rlink, next);</td></tr>
+<tr><td class="num" id="LN373">373</td><td class="line">  next[tree-&gt;label] = tree-&gt;trie;</td></tr>
+<tr><td class="num" id="LN374">374</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN375">375</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN376">376</td><td class="line"><span class='comment'>/* Compute the shift for each trie node, as well as the delta</span></td></tr>
+<tr><td class="num" id="LN377">377</td><td class="line">   <span class='comment'>table and next cache for the given keyword set. */</span></td></tr>
+<tr><td class="num" id="LN378">378</td><td class="line"><span class='keyword'>const</span> <span class='keyword'>char</span> *</td></tr>
+<tr><td class="num" id="LN379">379</td><td class="line">kwsprep (kwset_t kws)</td></tr>
+<tr><td class="num" id="LN380">380</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN381">381</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>struct</span> kwset *kwset;</td></tr>
+<tr><td class="num" id="LN382">382</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>int</span> i;</td></tr>
+<tr><td class="num" id="LN383">383</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>struct</span> trie *curr;</td></tr>
+<tr><td class="num" id="LN384">384</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> <span class='keyword'>const</span> *trans;</td></tr>
+<tr><td class="num" id="LN385">385</td><td class="line">  <span class='keyword'>unsigned</span> <span class='keyword'>char</span> delta[<span class='macro'>NCHAR<span class='expansion'>((127*2 +1) + 1)</span></span>];</td></tr>
+<tr><td class="num" id="LN386">386</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN387">387</td><td class="line">  kwset = (<span class='keyword'>struct</span> kwset *) kws;</td></tr>
+<tr><td class="num" id="LN388">388</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN389">389</td><td class="line">  <span class='comment'>/* Initial values for the delta table; will be changed later.  The</span></td></tr>
+<tr><td class="num" id="LN390">390</td><td class="line">     <span class='comment'>delta entry for a given character is the smallest depth of any</span></td></tr>
+<tr><td class="num" id="LN391">391</td><td class="line">     <span class='comment'>node at which an outgoing edge is labeled by that character. */</span></td></tr>
+<tr><td class="num" id="LN392">392</td><td class="line">  <span class='macro'>memset(delta, kwset-&gt;mind &lt; UCHAR_MAX ? kwset-&gt;mind : UCHAR_MAX, NCHAR)<span class='expansion'>__builtin___memset_chk (delta, kwset-&gt;mind &lt; (127*2 +1)<br> ? kwset-&gt;mind : (127*2 +1), ((127*2 +1) + 1), __builtin_object_size<br> (delta, 0))</span></span>;</td></tr>
+<tr><td class="num" id="LN393">393</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN394">394</td><td class="line">  <span class='comment'>/* Check if we can use the simple boyer-moore algorithm, instead</span></td></tr>
+<tr><td class="num" id="LN395">395</td><td class="line">     <span class='comment'>of the hairy commentz-walter algorithm. */</span></td></tr>
+<tr><td class="num" id="LN396">396</td><td class="line">  <span class='keyword'>if</span> (kwset-&gt;words == 1 &amp;&amp; kwset-&gt;trans == <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>)</td></tr>
+<tr><td class="num" id="LN397">397</td><td class="line">    {</td></tr>
+<tr><td class="num" id="LN398">398</td><td class="line">      <span class='keyword'>char</span> c;</td></tr>
+<tr><td class="num" id="LN399">399</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN400">400</td><td class="line">      <span class='comment'>/* Looking for just one string.  Extract it from the trie. */</span></td></tr>
+<tr><td class="num" id="LN401">401</td><td class="line">      kwset-&gt;target = <span class='macro'>obstack_alloc(&amp;kwset-&gt;obstack, kwset-&gt;mind)<span class='expansion'>__extension__ ({ struct obstack *__h = (&amp;kwset-&gt;obstack<br>); __extension__ ({ struct obstack *__o = (__h); int __len = (<br>(kwset-&gt;mind)); if (__o-&gt;chunk_limit - __o-&gt;next_free<br> &lt; __len) _obstack_newchunk (__o, __len); ((__o)-&gt;next_free<br> += (__len)); (void) 0; }); __extension__ ({ struct obstack *<br>__o1 = (__h); void *__value = (void *) __o1-&gt;object_base; if<br> (__o1-&gt;next_free == __value) __o1-&gt;maybe_empty_object =<br> 1; __o1-&gt;next_free = ((sizeof (long int) &lt; sizeof (void<br> *) ? (__o1-&gt;object_base) : (char *) 0) + (((__o1-&gt;next_free<br>) - (sizeof (long int) &lt; sizeof (void *) ? (__o1-&gt;object_base<br>) : (char *) 0) + (__o1-&gt;alignment_mask)) &amp; ~(__o1-&gt;<br>alignment_mask))); if (__o1-&gt;next_free - (char *)__o1-&gt;<br>chunk &gt; __o1-&gt;chunk_limit - (char *)__o1-&gt;chunk) __o1<br>-&gt;next_free = __o1-&gt;chunk_limit; __o1-&gt;object_base =<br> __o1-&gt;next_free; __value; }); })</span></span>;</td></tr>
+<tr><td class="num" id="LN402">402</td><td class="line">      <span class='keyword'>if</span> (!kwset-&gt;target)</td></tr>
+<tr><td class="num" id="LN403">403</td><td class="line">	<span class='keyword'>return</span> <span class='string_literal'>"memory exhausted"</span>;</td></tr>
+<tr><td class="num" id="LN404">404</td><td class="line">      <span class='keyword'>for</span> (i = kwset-&gt;mind - 1, curr = kwset-&gt;trie; i &gt;= 0; --i)</td></tr>
+<tr><td class="num" id="LN405">405</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN406">406</td><td class="line">	  kwset-&gt;target[i] = curr-&gt;links-&gt;label;</td></tr>
+<tr><td class="num" id="LN407">407</td><td class="line">	  curr = curr-&gt;links-&gt;trie;</td></tr>
+<tr><td class="num" id="LN408">408</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN409">409</td><td class="line">      <span class='comment'>/* Build the Boyer Moore delta.  Boy that's easy compared to CW. */</span></td></tr>
+<tr><td class="num" id="LN410">410</td><td class="line">      <span class='keyword'>for</span> (i = 0; i &lt; kwset-&gt;mind; ++i)</td></tr>
+<tr><td class="num" id="LN411">411</td><td class="line">	delta[<span class='macro'>U(kwset-&gt;target[i])<span class='expansion'>((unsigned char) (kwset-&gt;target[i]))</span></span>] = kwset-&gt;mind - (i + 1);</td></tr>
+<tr><td class="num" id="LN412">412</td><td class="line">      <span class='comment'>/* Find the minimal delta2 shift that we might make after</span></td></tr>
+<tr><td class="num" id="LN413">413</td><td class="line">	 <span class='comment'>a backwards match has failed. */</span></td></tr>
+<tr><td class="num" id="LN414">414</td><td class="line">      c = kwset-&gt;target[kwset-&gt;mind - 1];</td></tr>
+<tr><td class="num" id="LN415">415</td><td class="line">      <span class='keyword'>for</span> (i = kwset-&gt;mind - 2; i &gt;= 0; --i)</td></tr>
+<tr><td class="num" id="LN416">416</td><td class="line">	<span class='keyword'>if</span> (kwset-&gt;target[i] == c)</td></tr>
+<tr><td class="num" id="LN417">417</td><td class="line">	  <span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN418">418</td><td class="line">      kwset-&gt;mind2 = kwset-&gt;mind - (i + 1);</td></tr>
+<tr><td class="num" id="LN419">419</td><td class="line">    }</td></tr>
+<tr><td class="num" id="LN420">420</td><td class="line">  <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN421">421</td><td class="line">    {</td></tr>
+<tr><td class="num" id="LN422">422</td><td class="line">      <span class='keyword'>register</span> <span class='keyword'>struct</span> trie *fail;</td></tr>
+<tr><td class="num" id="LN423">423</td><td class="line">      <span class='keyword'>struct</span> trie *last, *next[<span class='macro'>NCHAR<span class='expansion'>((127*2 +1) + 1)</span></span>];</td></tr>
+<tr><td class="num" id="LN424">424</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN425">425</td><td class="line">      <span class='comment'>/* Traverse the nodes of the trie in level order, simultaneously</span></td></tr>
+<tr><td class="num" id="LN426">426</td><td class="line">	 <span class='comment'>computing the delta table, failure function, and shift function. */</span></td></tr>
+<tr><td class="num" id="LN427">427</td><td class="line">      <span class='keyword'>for</span> (curr = last = kwset-&gt;trie; <span class="mrange">curr</span>; curr = curr-&gt;next)</td></tr>
+<tr><td class="num"></td><td class="line"><div id="Path1" class="msg msgEvent" style="margin-left:39ex"><table class="msgT"><tr><td valign="top"><div class="PathIndex PathIndexEvent">1</div></td><td>Assuming pointer value is null</td><td><div class="PathNav"><a href="#Path2" title="Next event (2)">&#x2192;</a></div></td></tr></table></div></td></tr>
+<tr><td class="num"></td><td class="line"><div id="Path2" class="msg msgControl" style="margin-left:7ex"><table class="msgT"><tr><td valign="top"><div class="PathIndex PathIndexControl">2</div></td><td><div class="PathNav"><a href="#Path1" title="Previous event (1)">&#x2190;</a></div></td></td><td>Loop condition is false. Execution continues on line 462</td><td><div class="PathNav"><a href="#EndPath" title="Next event (3)">&#x2192;</a></div></td></tr></table></div></td></tr>
+<tr><td class="num" id="LN428">428</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN429">429</td><td class="line">	  <span class='comment'>/* Enqueue the immediate descendants in the level order queue. */</span></td></tr>
+<tr><td class="num" id="LN430">430</td><td class="line">	  enqueue(curr-&gt;links, &amp;last);</td></tr>
+<tr><td class="num" id="LN431">431</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN432">432</td><td class="line">	  curr-&gt;shift = kwset-&gt;mind;</td></tr>
+<tr><td class="num" id="LN433">433</td><td class="line">	  curr-&gt;maxshift = kwset-&gt;mind;</td></tr>
+<tr><td class="num" id="LN434">434</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN435">435</td><td class="line">	  <span class='comment'>/* Update the delta table for the descendants of this node. */</span></td></tr>
+<tr><td class="num" id="LN436">436</td><td class="line">	  treedelta(curr-&gt;links, curr-&gt;depth, delta);</td></tr>
+<tr><td class="num" id="LN437">437</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN438">438</td><td class="line">	  <span class='comment'>/* Compute the failure function for the descendants of this node. */</span></td></tr>
+<tr><td class="num" id="LN439">439</td><td class="line">	  treefails(curr-&gt;links, curr-&gt;fail, kwset-&gt;trie);</td></tr>
+<tr><td class="num" id="LN440">440</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN441">441</td><td class="line">	  <span class='comment'>/* Update the shifts at each node in the current node's chain</span></td></tr>
+<tr><td class="num" id="LN442">442</td><td class="line">	     <span class='comment'>of fails back to the root. */</span></td></tr>
+<tr><td class="num" id="LN443">443</td><td class="line">	  <span class='keyword'>for</span> (fail = curr-&gt;fail; fail; fail = fail-&gt;fail)</td></tr>
+<tr><td class="num" id="LN444">444</td><td class="line">	    {</td></tr>
+<tr><td class="num" id="LN445">445</td><td class="line">	      <span class='comment'>/* If the current node has some outgoing edge that the fail</span></td></tr>
+<tr><td class="num" id="LN446">446</td><td class="line">		 <span class='comment'>doesn't, then the shift at the fail should be no larger</span></td></tr>
+<tr><td class="num" id="LN447">447</td><td class="line">		 <span class='comment'>than the difference of their depths. */</span></td></tr>
+<tr><td class="num" id="LN448">448</td><td class="line">	      <span class='keyword'>if</span> (!hasevery(fail-&gt;links, curr-&gt;links))</td></tr>
+<tr><td class="num" id="LN449">449</td><td class="line">		<span class='keyword'>if</span> (curr-&gt;depth - fail-&gt;depth &lt; fail-&gt;shift)</td></tr>
+<tr><td class="num" id="LN450">450</td><td class="line">		  fail-&gt;shift = curr-&gt;depth - fail-&gt;depth;</td></tr>
+<tr><td class="num" id="LN451">451</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN452">452</td><td class="line">	      <span class='comment'>/* If the current node is accepting then the shift at the</span></td></tr>
+<tr><td class="num" id="LN453">453</td><td class="line">		 <span class='comment'>fail and its descendants should be no larger than the</span></td></tr>
+<tr><td class="num" id="LN454">454</td><td class="line">		 <span class='comment'>difference of their depths. */</span></td></tr>
+<tr><td class="num" id="LN455">455</td><td class="line">	      <span class='keyword'>if</span> (curr-&gt;accepting &amp;&amp; fail-&gt;maxshift &gt; curr-&gt;depth - fail-&gt;depth)</td></tr>
+<tr><td class="num" id="LN456">456</td><td class="line">		fail-&gt;maxshift = curr-&gt;depth - fail-&gt;depth;</td></tr>
+<tr><td class="num" id="LN457">457</td><td class="line">	    }</td></tr>
+<tr><td class="num" id="LN458">458</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN459">459</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN460">460</td><td class="line">      <span class='comment'>/* Traverse the trie in level order again, fixing up all nodes whose</span></td></tr>
+<tr><td class="num" id="LN461">461</td><td class="line">	 <span class='comment'>shift exceeds their inherited maxshift. */</span></td></tr>
+<tr><td class="num" id="LN462">462</td><td class="line">      <span class='keyword'>for</span> (curr = kwset-&gt;<span class="mrange">trie</span>-&gt;next; curr; curr = curr-&gt;next)</td></tr>
+<tr><td class="num"></td><td class="line"><div id="EndPath" class="msg msgEvent" style="margin-left:19ex"><table class="msgT"><tr><td valign="top"><div class="PathIndex PathIndexEvent">3</div></td><td><div class="PathNav"><a href="#Path2" title="Previous event (2)">&#x2190;</a></div></td></td><td>Access to field 'next' results in a dereference of a null pointer (loaded from field 'trie')</td></tr></table></div></td></tr>
+<tr><td class="num" id="LN463">463</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN464">464</td><td class="line">	  <span class='keyword'>if</span> (curr-&gt;maxshift &gt; curr-&gt;parent-&gt;maxshift)</td></tr>
+<tr><td class="num" id="LN465">465</td><td class="line">	    curr-&gt;maxshift = curr-&gt;parent-&gt;maxshift;</td></tr>
+<tr><td class="num" id="LN466">466</td><td class="line">	  <span class='keyword'>if</span> (curr-&gt;shift &gt; curr-&gt;maxshift)</td></tr>
+<tr><td class="num" id="LN467">467</td><td class="line">	    curr-&gt;shift = curr-&gt;maxshift;</td></tr>
+<tr><td class="num" id="LN468">468</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN469">469</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN470">470</td><td class="line">      <span class='comment'>/* Create a vector, indexed by character code, of the outgoing links</span></td></tr>
+<tr><td class="num" id="LN471">471</td><td class="line">	 <span class='comment'>from the root node. */</span></td></tr>
+<tr><td class="num" id="LN472">472</td><td class="line">      <span class='keyword'>for</span> (i = 0; i &lt; <span class='macro'>NCHAR<span class='expansion'>((127*2 +1) + 1)</span></span>; ++i)</td></tr>
+<tr><td class="num" id="LN473">473</td><td class="line">	next[i] = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN474">474</td><td class="line">      treenext(kwset-&gt;trie-&gt;links, next);</td></tr>
+<tr><td class="num" id="LN475">475</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN476">476</td><td class="line">      <span class='keyword'>if</span> ((trans = kwset-&gt;trans) != <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>)</td></tr>
+<tr><td class="num" id="LN477">477</td><td class="line">	<span class='keyword'>for</span> (i = 0; i &lt; <span class='macro'>NCHAR<span class='expansion'>((127*2 +1) + 1)</span></span>; ++i)</td></tr>
+<tr><td class="num" id="LN478">478</td><td class="line">	  kwset-&gt;next[i] = next[<span class='macro'>U(trans[i])<span class='expansion'>((unsigned char) (trans[i]))</span></span>];</td></tr>
+<tr><td class="num" id="LN479">479</td><td class="line">      <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN480">480</td><td class="line">	<span class='macro'>memcpy(kwset-&gt;next, next, NCHAR * <span class='keyword'>sizeof</span>(<span class='keyword'>struct</span> trie *))<span class='expansion'>__builtin___memcpy_chk (kwset-&gt;next, next, ((127*2 +1) + 1<br>) * sizeof(struct trie *), __builtin_object_size (kwset-&gt;next<br>, 0))</span></span>;</td></tr>
+<tr><td class="num" id="LN481">481</td><td class="line">    }</td></tr>
+<tr><td class="num" id="LN482">482</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN483">483</td><td class="line">  <span class='comment'>/* Fix things up for any translation table. */</span></td></tr>
+<tr><td class="num" id="LN484">484</td><td class="line">  <span class='keyword'>if</span> ((trans = kwset-&gt;trans) != <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>)</td></tr>
+<tr><td class="num" id="LN485">485</td><td class="line">    <span class='keyword'>for</span> (i = 0; i &lt; <span class='macro'>NCHAR<span class='expansion'>((127*2 +1) + 1)</span></span>; ++i)</td></tr>
+<tr><td class="num" id="LN486">486</td><td class="line">      kwset-&gt;delta[i] = delta[<span class='macro'>U(trans[i])<span class='expansion'>((unsigned char) (trans[i]))</span></span>];</td></tr>
+<tr><td class="num" id="LN487">487</td><td class="line">  <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN488">488</td><td class="line">    <span class='macro'>memcpy(kwset-&gt;delta, delta, NCHAR)<span class='expansion'>__builtin___memcpy_chk (kwset-&gt;delta, delta, ((127*2 +1) +<br> 1), __builtin_object_size (kwset-&gt;delta, 0))</span></span>;</td></tr>
+<tr><td class="num" id="LN489">489</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN490">490</td><td class="line">  <span class='keyword'>return</span> <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN491">491</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN492">492</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN493">493</td><td class="line"><span class='comment'>/* Fast boyer-moore search. */</span></td></tr>
+<tr><td class="num" id="LN494">494</td><td class="line"><span class='keyword'>static</span> size_t</td></tr>
+<tr><td class="num" id="LN495">495</td><td class="line">bmexec (kwset_t kws, <span class='keyword'>char</span> <span class='keyword'>const</span> *text, size_t size)</td></tr>
+<tr><td class="num" id="LN496">496</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN497">497</td><td class="line">  <span class='keyword'>struct</span> kwset <span class='keyword'>const</span> *kwset;</td></tr>
+<tr><td class="num" id="LN498">498</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> <span class='keyword'>const</span> *d1;</td></tr>
+<tr><td class="num" id="LN499">499</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>char</span> <span class='keyword'>const</span> *ep, *sp, *tp;</td></tr>
+<tr><td class="num" id="LN500">500</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>int</span> d, gc, i, len, md2;</td></tr>
+<tr><td class="num" id="LN501">501</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN502">502</td><td class="line">  kwset = (<span class='keyword'>struct</span> kwset <span class='keyword'>const</span> *) kws;</td></tr>
+<tr><td class="num" id="LN503">503</td><td class="line">  len = kwset-&gt;mind;</td></tr>
+<tr><td class="num" id="LN504">504</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN505">505</td><td class="line">  <span class='keyword'>if</span> (len == 0)</td></tr>
+<tr><td class="num" id="LN506">506</td><td class="line">    <span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN507">507</td><td class="line">  <span class='keyword'>if</span> (len &gt; size)</td></tr>
+<tr><td class="num" id="LN508">508</td><td class="line">    <span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN509">509</td><td class="line">  <span class='keyword'>if</span> (len == 1)</td></tr>
+<tr><td class="num" id="LN510">510</td><td class="line">    {</td></tr>
+<tr><td class="num" id="LN511">511</td><td class="line">      tp = memchr (text, kwset-&gt;target[0], size);</td></tr>
+<tr><td class="num" id="LN512">512</td><td class="line">      <span class='keyword'>return</span> tp ? tp - text : -1;</td></tr>
+<tr><td class="num" id="LN513">513</td><td class="line">    }</td></tr>
+<tr><td class="num" id="LN514">514</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN515">515</td><td class="line">  d1 = kwset-&gt;delta;</td></tr>
+<tr><td class="num" id="LN516">516</td><td class="line">  sp = kwset-&gt;target + len;</td></tr>
+<tr><td class="num" id="LN517">517</td><td class="line">  gc = <span class='macro'>U(sp[-2])<span class='expansion'>((unsigned char) (sp[-2]))</span></span>;</td></tr>
+<tr><td class="num" id="LN518">518</td><td class="line">  md2 = kwset-&gt;mind2;</td></tr>
+<tr><td class="num" id="LN519">519</td><td class="line">  tp = text + len;</td></tr>
+<tr><td class="num" id="LN520">520</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN521">521</td><td class="line">  <span class='comment'>/* Significance of 12: 1 (initial offset) + 10 (skip loop) + 1 (md2). */</span></td></tr>
+<tr><td class="num" id="LN522">522</td><td class="line">  <span class='keyword'>if</span> (size &gt; 12 * len)</td></tr>
+<tr><td class="num" id="LN523">523</td><td class="line">    <span class='comment'>/* 11 is not a bug, the initial offset happens only once. */</span></td></tr>
+<tr><td class="num" id="LN524">524</td><td class="line">    <span class='keyword'>for</span> (ep = text + size - 11 * len;;)</td></tr>
+<tr><td class="num" id="LN525">525</td><td class="line">      {</td></tr>
+<tr><td class="num" id="LN526">526</td><td class="line">	<span class='keyword'>while</span> (tp &lt;= ep)</td></tr>
+<tr><td class="num" id="LN527">527</td><td class="line">	  {</td></tr>
+<tr><td class="num" id="LN528">528</td><td class="line">	    d = d1[<span class='macro'>U(tp[-1])<span class='expansion'>((unsigned char) (tp[-1]))</span></span>], tp += d;</td></tr>
+<tr><td class="num" id="LN529">529</td><td class="line">	    d = d1[<span class='macro'>U(tp[-1])<span class='expansion'>((unsigned char) (tp[-1]))</span></span>], tp += d;</td></tr>
+<tr><td class="num" id="LN530">530</td><td class="line">	    <span class='keyword'>if</span> (d == 0)</td></tr>
+<tr><td class="num" id="LN531">531</td><td class="line">	      <span class='keyword'>goto</span> found;</td></tr>
+<tr><td class="num" id="LN532">532</td><td class="line">	    d = d1[<span class='macro'>U(tp[-1])<span class='expansion'>((unsigned char) (tp[-1]))</span></span>], tp += d;</td></tr>
+<tr><td class="num" id="LN533">533</td><td class="line">	    d = d1[<span class='macro'>U(tp[-1])<span class='expansion'>((unsigned char) (tp[-1]))</span></span>], tp += d;</td></tr>
+<tr><td class="num" id="LN534">534</td><td class="line">	    d = d1[<span class='macro'>U(tp[-1])<span class='expansion'>((unsigned char) (tp[-1]))</span></span>], tp += d;</td></tr>
+<tr><td class="num" id="LN535">535</td><td class="line">	    <span class='keyword'>if</span> (d == 0)</td></tr>
+<tr><td class="num" id="LN536">536</td><td class="line">	      <span class='keyword'>goto</span> found;</td></tr>
+<tr><td class="num" id="LN537">537</td><td class="line">	    d = d1[<span class='macro'>U(tp[-1])<span class='expansion'>((unsigned char) (tp[-1]))</span></span>], tp += d;</td></tr>
+<tr><td class="num" id="LN538">538</td><td class="line">	    d = d1[<span class='macro'>U(tp[-1])<span class='expansion'>((unsigned char) (tp[-1]))</span></span>], tp += d;</td></tr>
+<tr><td class="num" id="LN539">539</td><td class="line">	    d = d1[<span class='macro'>U(tp[-1])<span class='expansion'>((unsigned char) (tp[-1]))</span></span>], tp += d;</td></tr>
+<tr><td class="num" id="LN540">540</td><td class="line">	    <span class='keyword'>if</span> (d == 0)</td></tr>
+<tr><td class="num" id="LN541">541</td><td class="line">	      <span class='keyword'>goto</span> found;</td></tr>
+<tr><td class="num" id="LN542">542</td><td class="line">	    d = d1[<span class='macro'>U(tp[-1])<span class='expansion'>((unsigned char) (tp[-1]))</span></span>], tp += d;</td></tr>
+<tr><td class="num" id="LN543">543</td><td class="line">	    d = d1[<span class='macro'>U(tp[-1])<span class='expansion'>((unsigned char) (tp[-1]))</span></span>], tp += d;</td></tr>
+<tr><td class="num" id="LN544">544</td><td class="line">	  }</td></tr>
+<tr><td class="num" id="LN545">545</td><td class="line">	<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN546">546</td><td class="line">      found:</td></tr>
+<tr><td class="num" id="LN547">547</td><td class="line">	<span class='keyword'>if</span> (<span class='macro'>U(tp[-2])<span class='expansion'>((unsigned char) (tp[-2]))</span></span> == gc)</td></tr>
+<tr><td class="num" id="LN548">548</td><td class="line">	  {</td></tr>
+<tr><td class="num" id="LN549">549</td><td class="line">	    <span class='keyword'>for</span> (i = 3; i &lt;= len &amp;&amp; <span class='macro'>U(tp[-i])<span class='expansion'>((unsigned char) (tp[-i]))</span></span> == <span class='macro'>U(sp[-i])<span class='expansion'>((unsigned char) (sp[-i]))</span></span>; ++i)</td></tr>
+<tr><td class="num" id="LN550">550</td><td class="line">	      ;</td></tr>
+<tr><td class="num" id="LN551">551</td><td class="line">	    <span class='keyword'>if</span> (i &gt; len)</td></tr>
+<tr><td class="num" id="LN552">552</td><td class="line">	      <span class='keyword'>return</span> tp - len - text;</td></tr>
+<tr><td class="num" id="LN553">553</td><td class="line">	  }</td></tr>
+<tr><td class="num" id="LN554">554</td><td class="line">	tp += md2;</td></tr>
+<tr><td class="num" id="LN555">555</td><td class="line">      }</td></tr>
+<tr><td class="num" id="LN556">556</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN557">557</td><td class="line">  <span class='comment'>/* Now we have only a few characters left to search.  We</span></td></tr>
+<tr><td class="num" id="LN558">558</td><td class="line">     <span class='comment'>carefully avoid ever producing an out-of-bounds pointer. */</span></td></tr>
+<tr><td class="num" id="LN559">559</td><td class="line">  ep = text + size;</td></tr>
+<tr><td class="num" id="LN560">560</td><td class="line">  d = d1[<span class='macro'>U(tp[-1])<span class='expansion'>((unsigned char) (tp[-1]))</span></span>];</td></tr>
+<tr><td class="num" id="LN561">561</td><td class="line">  <span class='keyword'>while</span> (d &lt;= ep - tp)</td></tr>
+<tr><td class="num" id="LN562">562</td><td class="line">    {</td></tr>
+<tr><td class="num" id="LN563">563</td><td class="line">      d = d1[<span class='macro'>U((tp += d)[-1])<span class='expansion'>((unsigned char) ((tp += d)[-1]))</span></span>];</td></tr>
+<tr><td class="num" id="LN564">564</td><td class="line">      <span class='keyword'>if</span> (d != 0)</td></tr>
+<tr><td class="num" id="LN565">565</td><td class="line">	<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN566">566</td><td class="line">      <span class='keyword'>if</span> (<span class='macro'>U(tp[-2])<span class='expansion'>((unsigned char) (tp[-2]))</span></span> == gc)</td></tr>
+<tr><td class="num" id="LN567">567</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN568">568</td><td class="line">	  <span class='keyword'>for</span> (i = 3; i &lt;= len &amp;&amp; <span class='macro'>U(tp[-i])<span class='expansion'>((unsigned char) (tp[-i]))</span></span> == <span class='macro'>U(sp[-i])<span class='expansion'>((unsigned char) (sp[-i]))</span></span>; ++i)</td></tr>
+<tr><td class="num" id="LN569">569</td><td class="line">	    ;</td></tr>
+<tr><td class="num" id="LN570">570</td><td class="line">	  <span class='keyword'>if</span> (i &gt; len)</td></tr>
+<tr><td class="num" id="LN571">571</td><td class="line">	    <span class='keyword'>return</span> tp - len - text;</td></tr>
+<tr><td class="num" id="LN572">572</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN573">573</td><td class="line">      d = md2;</td></tr>
+<tr><td class="num" id="LN574">574</td><td class="line">    }</td></tr>
+<tr><td class="num" id="LN575">575</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN576">576</td><td class="line">  <span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN577">577</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN578">578</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN579">579</td><td class="line"><span class='comment'>/* Hairy multiple string search. */</span></td></tr>
+<tr><td class="num" id="LN580">580</td><td class="line"><span class='keyword'>static</span> size_t</td></tr>
+<tr><td class="num" id="LN581">581</td><td class="line">cwexec (kwset_t kws, <span class='keyword'>char</span> <span class='keyword'>const</span> *text, size_t len, <span class='keyword'>struct</span> kwsmatch *kwsmatch)</td></tr>
+<tr><td class="num" id="LN582">582</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN583">583</td><td class="line">  <span class='keyword'>struct</span> kwset <span class='keyword'>const</span> *kwset;</td></tr>
+<tr><td class="num" id="LN584">584</td><td class="line">  <span class='keyword'>struct</span> trie * <span class='keyword'>const</span> *next;</td></tr>
+<tr><td class="num" id="LN585">585</td><td class="line">  <span class='keyword'>struct</span> trie <span class='keyword'>const</span> *trie;</td></tr>
+<tr><td class="num" id="LN586">586</td><td class="line">  <span class='keyword'>struct</span> trie <span class='keyword'>const</span> *accept;</td></tr>
+<tr><td class="num" id="LN587">587</td><td class="line">  <span class='keyword'>char</span> <span class='keyword'>const</span> *beg, *lim, *mch, *lmch;</td></tr>
+<tr><td class="num" id="LN588">588</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> c;</td></tr>
+<tr><td class="num" id="LN589">589</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> <span class='keyword'>const</span> *delta;</td></tr>
+<tr><td class="num" id="LN590">590</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>int</span> d;</td></tr>
+<tr><td class="num" id="LN591">591</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>char</span> <span class='keyword'>const</span> *end, *qlim;</td></tr>
+<tr><td class="num" id="LN592">592</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>struct</span> tree <span class='keyword'>const</span> *tree;</td></tr>
+<tr><td class="num" id="LN593">593</td><td class="line">  <span class='keyword'>register</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> <span class='keyword'>const</span> *trans;</td></tr>
+<tr><td class="num" id="LN594">594</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN595">595</td><td class="line">  accept = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN596">596</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN597">597</td><td class="line">  <span class='comment'>/* Initialize register copies and look for easy ways out. */</span></td></tr>
+<tr><td class="num" id="LN598">598</td><td class="line">  kwset = (<span class='keyword'>struct</span> kwset *) kws;</td></tr>
+<tr><td class="num" id="LN599">599</td><td class="line">  <span class='keyword'>if</span> (len &lt; kwset-&gt;mind)</td></tr>
+<tr><td class="num" id="LN600">600</td><td class="line">    <span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN601">601</td><td class="line">  next = kwset-&gt;next;</td></tr>
+<tr><td class="num" id="LN602">602</td><td class="line">  delta = kwset-&gt;delta;</td></tr>
+<tr><td class="num" id="LN603">603</td><td class="line">  trans = kwset-&gt;trans;</td></tr>
+<tr><td class="num" id="LN604">604</td><td class="line">  lim = text + len;</td></tr>
+<tr><td class="num" id="LN605">605</td><td class="line">  end = text;</td></tr>
+<tr><td class="num" id="LN606">606</td><td class="line">  <span class='keyword'>if</span> ((d = kwset-&gt;mind) != 0)</td></tr>
+<tr><td class="num" id="LN607">607</td><td class="line">    mch = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN608">608</td><td class="line">  <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN609">609</td><td class="line">    {</td></tr>
+<tr><td class="num" id="LN610">610</td><td class="line">      mch = text, accept = kwset-&gt;trie;</td></tr>
+<tr><td class="num" id="LN611">611</td><td class="line">      <span class='keyword'>goto</span> match;</td></tr>
+<tr><td class="num" id="LN612">612</td><td class="line">    }</td></tr>
+<tr><td class="num" id="LN613">613</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN614">614</td><td class="line">  <span class='keyword'>if</span> (len &gt;= 4 * kwset-&gt;mind)</td></tr>
+<tr><td class="num" id="LN615">615</td><td class="line">    qlim = lim - 4 * kwset-&gt;mind;</td></tr>
+<tr><td class="num" id="LN616">616</td><td class="line">  <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN617">617</td><td class="line">    qlim = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN618">618</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN619">619</td><td class="line">  <span class='keyword'>while</span> (lim - end &gt;= d)</td></tr>
+<tr><td class="num" id="LN620">620</td><td class="line">    {</td></tr>
+<tr><td class="num" id="LN621">621</td><td class="line">      <span class='keyword'>if</span> (qlim &amp;&amp; end &lt;= qlim)</td></tr>
+<tr><td class="num" id="LN622">622</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN623">623</td><td class="line">	  end += d - 1;</td></tr>
+<tr><td class="num" id="LN624">624</td><td class="line">	  <span class='keyword'>while</span> ((d = delta[c = *end]) &amp;&amp; end &lt; qlim)</td></tr>
+<tr><td class="num" id="LN625">625</td><td class="line">	    {</td></tr>
+<tr><td class="num" id="LN626">626</td><td class="line">	      end += d;</td></tr>
+<tr><td class="num" id="LN627">627</td><td class="line">	      end += delta[<span class='macro'>U(*end)<span class='expansion'>((unsigned char) (*end))</span></span>];</td></tr>
+<tr><td class="num" id="LN628">628</td><td class="line">	      end += delta[<span class='macro'>U(*end)<span class='expansion'>((unsigned char) (*end))</span></span>];</td></tr>
+<tr><td class="num" id="LN629">629</td><td class="line">	    }</td></tr>
+<tr><td class="num" id="LN630">630</td><td class="line">	  ++end;</td></tr>
+<tr><td class="num" id="LN631">631</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN632">632</td><td class="line">      <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN633">633</td><td class="line">	d = delta[c = (end += d)[-1]];</td></tr>
+<tr><td class="num" id="LN634">634</td><td class="line">      <span class='keyword'>if</span> (d)</td></tr>
+<tr><td class="num" id="LN635">635</td><td class="line">	<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN636">636</td><td class="line">      beg = end - 1;</td></tr>
+<tr><td class="num" id="LN637">637</td><td class="line">      trie = next[c];</td></tr>
+<tr><td class="num" id="LN638">638</td><td class="line">      <span class='keyword'>if</span> (trie-&gt;accepting)</td></tr>
+<tr><td class="num" id="LN639">639</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN640">640</td><td class="line">	  mch = beg;</td></tr>
+<tr><td class="num" id="LN641">641</td><td class="line">	  accept = trie;</td></tr>
+<tr><td class="num" id="LN642">642</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN643">643</td><td class="line">      d = trie-&gt;shift;</td></tr>
+<tr><td class="num" id="LN644">644</td><td class="line">      <span class='keyword'>while</span> (beg &gt; text)</td></tr>
+<tr><td class="num" id="LN645">645</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN646">646</td><td class="line">	  c = trans ? trans[<span class='macro'>U(*--beg)<span class='expansion'>((unsigned char) (*--beg))</span></span>] : *--beg;</td></tr>
+<tr><td class="num" id="LN647">647</td><td class="line">	  tree = trie-&gt;links;</td></tr>
+<tr><td class="num" id="LN648">648</td><td class="line">	  <span class='keyword'>while</span> (tree &amp;&amp; c != tree-&gt;label)</td></tr>
+<tr><td class="num" id="LN649">649</td><td class="line">	    <span class='keyword'>if</span> (c &lt; tree-&gt;label)</td></tr>
+<tr><td class="num" id="LN650">650</td><td class="line">	      tree = tree-&gt;llink;</td></tr>
+<tr><td class="num" id="LN651">651</td><td class="line">	    <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN652">652</td><td class="line">	      tree = tree-&gt;rlink;</td></tr>
+<tr><td class="num" id="LN653">653</td><td class="line">	  <span class='keyword'>if</span> (tree)</td></tr>
+<tr><td class="num" id="LN654">654</td><td class="line">	    {</td></tr>
+<tr><td class="num" id="LN655">655</td><td class="line">	      trie = tree-&gt;trie;</td></tr>
+<tr><td class="num" id="LN656">656</td><td class="line">	      <span class='keyword'>if</span> (trie-&gt;accepting)</td></tr>
+<tr><td class="num" id="LN657">657</td><td class="line">		{</td></tr>
+<tr><td class="num" id="LN658">658</td><td class="line">		  mch = beg;</td></tr>
+<tr><td class="num" id="LN659">659</td><td class="line">		  accept = trie;</td></tr>
+<tr><td class="num" id="LN660">660</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN661">661</td><td class="line">	    }</td></tr>
+<tr><td class="num" id="LN662">662</td><td class="line">	  <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN663">663</td><td class="line">	    <span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN664">664</td><td class="line">	  d = trie-&gt;shift;</td></tr>
+<tr><td class="num" id="LN665">665</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN666">666</td><td class="line">      <span class='keyword'>if</span> (mch)</td></tr>
+<tr><td class="num" id="LN667">667</td><td class="line">	<span class='keyword'>goto</span> match;</td></tr>
+<tr><td class="num" id="LN668">668</td><td class="line">    }</td></tr>
+<tr><td class="num" id="LN669">669</td><td class="line">  <span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN670">670</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN671">671</td><td class="line"> match:</td></tr>
+<tr><td class="num" id="LN672">672</td><td class="line">  <span class='comment'>/* Given a known match, find the longest possible match anchored</span></td></tr>
+<tr><td class="num" id="LN673">673</td><td class="line">     <span class='comment'>at or before its starting point.  This is nearly a verbatim</span></td></tr>
+<tr><td class="num" id="LN674">674</td><td class="line">     <span class='comment'>copy of the preceding main search loops. */</span></td></tr>
+<tr><td class="num" id="LN675">675</td><td class="line">  <span class='keyword'>if</span> (lim - mch &gt; kwset-&gt;maxd)</td></tr>
+<tr><td class="num" id="LN676">676</td><td class="line">    lim = mch + kwset-&gt;maxd;</td></tr>
+<tr><td class="num" id="LN677">677</td><td class="line">  lmch = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN678">678</td><td class="line">  d = 1;</td></tr>
+<tr><td class="num" id="LN679">679</td><td class="line">  <span class='keyword'>while</span> (lim - end &gt;= d)</td></tr>
+<tr><td class="num" id="LN680">680</td><td class="line">    {</td></tr>
+<tr><td class="num" id="LN681">681</td><td class="line">      <span class='keyword'>if</span> ((d = delta[c = (end += d)[-1]]) != 0)</td></tr>
+<tr><td class="num" id="LN682">682</td><td class="line">	<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN683">683</td><td class="line">      beg = end - 1;</td></tr>
+<tr><td class="num" id="LN684">684</td><td class="line">      <span class='keyword'>if</span> (!(trie = next[c]))</td></tr>
+<tr><td class="num" id="LN685">685</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN686">686</td><td class="line">	  d = 1;</td></tr>
+<tr><td class="num" id="LN687">687</td><td class="line">	  <span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN688">688</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN689">689</td><td class="line">      <span class='keyword'>if</span> (trie-&gt;accepting &amp;&amp; beg &lt;= mch)</td></tr>
+<tr><td class="num" id="LN690">690</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN691">691</td><td class="line">	  lmch = beg;</td></tr>
+<tr><td class="num" id="LN692">692</td><td class="line">	  accept = trie;</td></tr>
+<tr><td class="num" id="LN693">693</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN694">694</td><td class="line">      d = trie-&gt;shift;</td></tr>
+<tr><td class="num" id="LN695">695</td><td class="line">      <span class='keyword'>while</span> (beg &gt; text)</td></tr>
+<tr><td class="num" id="LN696">696</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN697">697</td><td class="line">	  c = trans ? trans[<span class='macro'>U(*--beg)<span class='expansion'>((unsigned char) (*--beg))</span></span>] : *--beg;</td></tr>
+<tr><td class="num" id="LN698">698</td><td class="line">	  tree = trie-&gt;links;</td></tr>
+<tr><td class="num" id="LN699">699</td><td class="line">	  <span class='keyword'>while</span> (tree &amp;&amp; c != tree-&gt;label)</td></tr>
+<tr><td class="num" id="LN700">700</td><td class="line">	    <span class='keyword'>if</span> (c &lt; tree-&gt;label)</td></tr>
+<tr><td class="num" id="LN701">701</td><td class="line">	      tree = tree-&gt;llink;</td></tr>
+<tr><td class="num" id="LN702">702</td><td class="line">	    <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN703">703</td><td class="line">	      tree = tree-&gt;rlink;</td></tr>
+<tr><td class="num" id="LN704">704</td><td class="line">	  <span class='keyword'>if</span> (tree)</td></tr>
+<tr><td class="num" id="LN705">705</td><td class="line">	    {</td></tr>
+<tr><td class="num" id="LN706">706</td><td class="line">	      trie = tree-&gt;trie;</td></tr>
+<tr><td class="num" id="LN707">707</td><td class="line">	      <span class='keyword'>if</span> (trie-&gt;accepting &amp;&amp; beg &lt;= mch)</td></tr>
+<tr><td class="num" id="LN708">708</td><td class="line">		{</td></tr>
+<tr><td class="num" id="LN709">709</td><td class="line">		  lmch = beg;</td></tr>
+<tr><td class="num" id="LN710">710</td><td class="line">		  accept = trie;</td></tr>
+<tr><td class="num" id="LN711">711</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN712">712</td><td class="line">	    }</td></tr>
+<tr><td class="num" id="LN713">713</td><td class="line">	  <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN714">714</td><td class="line">	    <span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN715">715</td><td class="line">	  d = trie-&gt;shift;</td></tr>
+<tr><td class="num" id="LN716">716</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN717">717</td><td class="line">      <span class='keyword'>if</span> (lmch)</td></tr>
+<tr><td class="num" id="LN718">718</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN719">719</td><td class="line">	  mch = lmch;</td></tr>
+<tr><td class="num" id="LN720">720</td><td class="line">	  <span class='keyword'>goto</span> match;</td></tr>
+<tr><td class="num" id="LN721">721</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN722">722</td><td class="line">      <span class='keyword'>if</span> (!d)</td></tr>
+<tr><td class="num" id="LN723">723</td><td class="line">	d = 1;</td></tr>
+<tr><td class="num" id="LN724">724</td><td class="line">    }</td></tr>
+<tr><td class="num" id="LN725">725</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN726">726</td><td class="line">  <span class='keyword'>if</span> (kwsmatch)</td></tr>
+<tr><td class="num" id="LN727">727</td><td class="line">    {</td></tr>
+<tr><td class="num" id="LN728">728</td><td class="line">      kwsmatch-&gt;index = accept-&gt;accepting / 2;</td></tr>
+<tr><td class="num" id="LN729">729</td><td class="line">      kwsmatch-&gt;offset[0] = mch - text;</td></tr>
+<tr><td class="num" id="LN730">730</td><td class="line">      kwsmatch-&gt;size[0] = accept-&gt;depth;</td></tr>
+<tr><td class="num" id="LN731">731</td><td class="line">    }</td></tr>
+<tr><td class="num" id="LN732">732</td><td class="line">  <span class='keyword'>return</span> mch - text;</td></tr>
+<tr><td class="num" id="LN733">733</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN734">734</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN735">735</td><td class="line"><span class='comment'>/* Search through the given text for a match of any member of the</span></td></tr>
+<tr><td class="num" id="LN736">736</td><td class="line">   <span class='comment'>given keyword set.  Return a pointer to the first character of</span></td></tr>
+<tr><td class="num" id="LN737">737</td><td class="line">   <span class='comment'>the matching substring, or NULL if no match is found.  If FOUNDLEN</span></td></tr>
+<tr><td class="num" id="LN738">738</td><td class="line">   <span class='comment'>is non-NULL store in the referenced location the length of the</span></td></tr>
+<tr><td class="num" id="LN739">739</td><td class="line">   <span class='comment'>matching substring.  Similarly, if FOUNDIDX is non-NULL, store</span></td></tr>
+<tr><td class="num" id="LN740">740</td><td class="line">   <span class='comment'>in the referenced location the index number of the particular</span></td></tr>
+<tr><td class="num" id="LN741">741</td><td class="line">   <span class='comment'>keyword matched. */</span></td></tr>
+<tr><td class="num" id="LN742">742</td><td class="line">size_t</td></tr>
+<tr><td class="num" id="LN743">743</td><td class="line">kwsexec (kwset_t kws, <span class='keyword'>char</span> <span class='keyword'>const</span> *text, size_t size,</td></tr>
+<tr><td class="num" id="LN744">744</td><td class="line">	 <span class='keyword'>struct</span> kwsmatch *kwsmatch)</td></tr>
+<tr><td class="num" id="LN745">745</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN746">746</td><td class="line">  <span class='keyword'>struct</span> kwset <span class='keyword'>const</span> *kwset = (<span class='keyword'>struct</span> kwset *) kws;</td></tr>
+<tr><td class="num" id="LN747">747</td><td class="line">  <span class='keyword'>if</span> (kwset-&gt;words == 1 &amp;&amp; kwset-&gt;trans == <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>)</td></tr>
+<tr><td class="num" id="LN748">748</td><td class="line">    {</td></tr>
+<tr><td class="num" id="LN749">749</td><td class="line">      size_t ret = bmexec (kws, text, size);</td></tr>
+<tr><td class="num" id="LN750">750</td><td class="line">      <span class='keyword'>if</span> (kwsmatch != <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span> &amp;&amp; ret != (size_t) -1)</td></tr>
+<tr><td class="num" id="LN751">751</td><td class="line">	{</td></tr>
+<tr><td class="num" id="LN752">752</td><td class="line">	  kwsmatch-&gt;index = 0;</td></tr>
+<tr><td class="num" id="LN753">753</td><td class="line">	  kwsmatch-&gt;offset[0] = ret;</td></tr>
+<tr><td class="num" id="LN754">754</td><td class="line">	  kwsmatch-&gt;size[0] = kwset-&gt;mind;</td></tr>
+<tr><td class="num" id="LN755">755</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN756">756</td><td class="line">      <span class='keyword'>return</span> ret;</td></tr>
+<tr><td class="num" id="LN757">757</td><td class="line">    }</td></tr>
+<tr><td class="num" id="LN758">758</td><td class="line">  <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN759">759</td><td class="line">    <span class='keyword'>return</span> cwexec(kws, text, size, kwsmatch);</td></tr>
+<tr><td class="num" id="LN760">760</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN761">761</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN762">762</td><td class="line"><span class='comment'>/* Free the components of the given keyword set. */</span></td></tr>
+<tr><td class="num" id="LN763">763</td><td class="line"><span class='keyword'>void</span></td></tr>
+<tr><td class="num" id="LN764">764</td><td class="line">kwsfree (kwset_t kws)</td></tr>
+<tr><td class="num" id="LN765">765</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN766">766</td><td class="line">  <span class='keyword'>struct</span> kwset *kwset;</td></tr>
+<tr><td class="num" id="LN767">767</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN768">768</td><td class="line">  kwset = (<span class='keyword'>struct</span> kwset *) kws;</td></tr>
+<tr><td class="num" id="LN769">769</td><td class="line">  <span class='macro'>obstack_free(&amp;kwset-&gt;obstack, NULL)<span class='expansion'>__extension__ ({ struct obstack *__o = (&amp;kwset-&gt;obstack<br>); void *__obj = (((void*)0)); if (__obj &gt; (void *)__o-&gt;<br>chunk &amp;&amp; __obj &lt; (void *)__o-&gt;chunk_limit) __o-&gt;<br>next_free = __o-&gt;object_base = (char *)__obj; else (obstack_free<br>) (__o, __obj); })</span></span>;</td></tr>
+<tr><td class="num" id="LN770">770</td><td class="line">  free(kws);</td></tr>
+<tr><td class="num" id="LN771">771</td><td class="line">}</td></tr>
+</table></body></html>

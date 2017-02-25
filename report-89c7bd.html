@@ -1,0 +1,1113 @@
+<!doctype html>
+<html>
+<head>
+<title>builtin/notes.c</title>
+<style type="text/css">
+ body { color:#000000; background-color:#ffffff }
+ body { font-family:Helvetica, sans-serif; font-size:10pt }
+ h1 { font-size:14pt }
+ .code { border-collapse:collapse; width:100%; }
+ .code { font-family: "Monospace", monospace; font-size:10pt }
+ .code { line-height: 1.2em }
+ .comment { color: green; font-style: oblique }
+ .keyword { color: blue }
+ .string_literal { color: red }
+ .directive { color: darkmagenta }
+ .expansion { display: none; }
+ .macro:hover .expansion { display: block; border: 2px solid #FF0000; padding: 2px; background-color:#FFF0F0; font-weight: normal;   -webkit-border-radius:5px;  -webkit-box-shadow:1px 1px 7px #000; position: absolute; top: -1em; left:10em; z-index: 1 } 
+ .macro { color: darkmagenta; background-color:LemonChiffon; position: relative }
+ .num { width:2.5em; padding-right:2ex; background-color:#eeeeee }
+ .num { text-align:right; font-size:8pt }
+ .num { color:#444444 }
+ .line { padding-left: 1ex; border-left: 3px solid #ccc }
+ .line { white-space: pre }
+ .msg { -webkit-box-shadow:1px 1px 7px #000 }
+ .msg { -webkit-border-radius:5px }
+ .msg { font-family:Helvetica, sans-serif; font-size:8pt }
+ .msg { float:left }
+ .msg { padding:0.25em 1ex 0.25em 1ex }
+ .msg { margin-top:10px; margin-bottom:10px }
+ .msg { font-weight:bold }
+ .msg { max-width:60em; word-wrap: break-word; white-space: pre-wrap }
+ .msgT { padding:0x; spacing:0x }
+ .msgEvent { background-color:#fff8b4; color:#000000 }
+ .msgControl { background-color:#bbbbbb; color:#000000 }
+ .mrange { background-color:#dfddf3 }
+ .mrange { border-bottom:1px solid #6F9DBE }
+ .PathIndex { font-weight: bold; padding:0px 5px; margin-right:5px; }
+ .PathIndex { -webkit-border-radius:8px }
+ .PathIndexEvent { background-color:#bfba87 }
+ .PathIndexControl { background-color:#8c8c8c }
+ .PathNav a { text-decoration:none; font-size: larger }
+ .CodeInsertionHint { font-weight: bold; background-color: #10dd10 }
+ .CodeRemovalHint { background-color:#de1010 }
+ .CodeRemovalHint { border-bottom:1px solid #6F9DBE }
+ table.simpletable {
+   padding: 5px;
+   font-size:12pt;
+   margin:20px;
+   border-collapse: collapse; border-spacing: 0px;
+ }
+ td.rowname {
+   text-align:right; font-weight:bold; color:#444444;
+   padding-right:2ex; }
+</style>
+</head>
+<body>
+<!-- BUGDESC Value stored to 'result' is never read -->
+
+<!-- BUGTYPE Dead assignment -->
+
+<!-- BUGCATEGORY Dead store -->
+
+<!-- BUGFILE /Users/lars/Code/git/builtin/notes.c -->
+
+<!-- FILENAME notes.c -->
+
+<!-- FUNCTIONNAME cmd_notes -->
+
+<!-- ISSUEHASHCONTENTOFLINEINCONTEXT 4e9f7be543d7ce9da76d4b95c3ddf320 -->
+
+<!-- BUGLINE 1019 -->
+
+<!-- BUGCOLUMN 3 -->
+
+<!-- BUGPATHLENGTH 1 -->
+
+<!-- BUGMETAEND -->
+<!-- REPORTHEADER -->
+<h3>Bug Summary</h3>
+<table class="simpletable">
+<tr><td class="rowname">File:</td><td>builtin/notes.c</td></tr>
+<tr><td class="rowname">Location:</td><td><a href="#EndPath">line 1019, column 3</a></td></tr>
+<tr><td class="rowname">Description:</td><td>Value stored to 'result' is never read</td></tr>
+</table>
+<!-- REPORTSUMMARYEXTRA -->
+<h3>Annotated Source Code</h3>
+<table class="code">
+<tr><td class="num" id="LN1">1</td><td class="line"><span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN2">2</td><td class="line"> <span class='comment'>* Builtin "git notes"</span></td></tr>
+<tr><td class="num" id="LN3">3</td><td class="line"> <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN4">4</td><td class="line"> <span class='comment'>* Copyright (c) 2010 Johan Herland &lt;johan@herland.net&gt;</span></td></tr>
+<tr><td class="num" id="LN5">5</td><td class="line"> <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN6">6</td><td class="line"> <span class='comment'>* Based on git-notes.sh by Johannes Schindelin,</span></td></tr>
+<tr><td class="num" id="LN7">7</td><td class="line"> <span class='comment'>* and builtin/tag.c by Kristian Høgsberg and Carlos Rica.</span></td></tr>
+<tr><td class="num" id="LN8">8</td><td class="line"> <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN9">9</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN10">10</td><td class="line"><span class='directive'>#include "cache.h"</span></td></tr>
+<tr><td class="num" id="LN11">11</td><td class="line"><span class='directive'>#include "builtin.h"</span></td></tr>
+<tr><td class="num" id="LN12">12</td><td class="line"><span class='directive'>#include "notes.h"</span></td></tr>
+<tr><td class="num" id="LN13">13</td><td class="line"><span class='directive'>#include "blob.h"</span></td></tr>
+<tr><td class="num" id="LN14">14</td><td class="line"><span class='directive'>#include "commit.h"</span></td></tr>
+<tr><td class="num" id="LN15">15</td><td class="line"><span class='directive'>#include "refs.h"</span></td></tr>
+<tr><td class="num" id="LN16">16</td><td class="line"><span class='directive'>#include "exec_cmd.h"</span></td></tr>
+<tr><td class="num" id="LN17">17</td><td class="line"><span class='directive'>#include "run-command.h"</span></td></tr>
+<tr><td class="num" id="LN18">18</td><td class="line"><span class='directive'>#include "parse-options.h"</span></td></tr>
+<tr><td class="num" id="LN19">19</td><td class="line"><span class='directive'>#include "string-list.h"</span></td></tr>
+<tr><td class="num" id="LN20">20</td><td class="line"><span class='directive'>#include "notes-merge.h"</span></td></tr>
+<tr><td class="num" id="LN21">21</td><td class="line"><span class='directive'>#include "notes-utils.h"</span></td></tr>
+<tr><td class="num" id="LN22">22</td><td class="line"><span class='directive'>#include "worktree.h"</span></td></tr>
+<tr><td class="num" id="LN23">23</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN24">24</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> * <span class='keyword'>const</span> git_notes_usage[] = {</td></tr>
+<tr><td class="num" id="LN25">25</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes [--ref &lt;notes-ref&gt;] [list [&lt;object&gt;]]"</span>)<span class='expansion'>("git notes [--ref &lt;notes-ref&gt;] [list [&lt;object&gt;]]"<br>)</span></span>,</td></tr>
+<tr><td class="num" id="LN26">26</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes [--ref &lt;notes-ref&gt;] add [-f] [--allow-empty] [-m &lt;msg&gt; | -F &lt;file&gt; | (-c | -C) &lt;object&gt;] [&lt;object&gt;]"</span>)<span class='expansion'>("git notes [--ref &lt;notes-ref&gt;] add [-f] [--allow-empty] [-m &lt;msg&gt; | -F &lt;file&gt; | (-c | -C) &lt;object&gt;] [&lt;object&gt;]"<br>)</span></span>,</td></tr>
+<tr><td class="num" id="LN27">27</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes [--ref &lt;notes-ref&gt;] copy [-f] &lt;from-object&gt; &lt;to-object&gt;"</span>)<span class='expansion'>("git notes [--ref &lt;notes-ref&gt;] copy [-f] &lt;from-object&gt; &lt;to-object&gt;"<br>)</span></span>,</td></tr>
+<tr><td class="num" id="LN28">28</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes [--ref &lt;notes-ref&gt;] append [--allow-empty] [-m &lt;msg&gt; | -F &lt;file&gt; | (-c | -C) &lt;object&gt;] [&lt;object&gt;]"</span>)<span class='expansion'>("git notes [--ref &lt;notes-ref&gt;] append [--allow-empty] [-m &lt;msg&gt; | -F &lt;file&gt; | (-c | -C) &lt;object&gt;] [&lt;object&gt;]"<br>)</span></span>,</td></tr>
+<tr><td class="num" id="LN29">29</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes [--ref &lt;notes-ref&gt;] edit [--allow-empty] [&lt;object&gt;]"</span>)<span class='expansion'>("git notes [--ref &lt;notes-ref&gt;] edit [--allow-empty] [&lt;object&gt;]"<br>)</span></span>,</td></tr>
+<tr><td class="num" id="LN30">30</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes [--ref &lt;notes-ref&gt;] show [&lt;object&gt;]"</span>)<span class='expansion'>("git notes [--ref &lt;notes-ref&gt;] show [&lt;object&gt;]")</span></span>,</td></tr>
+<tr><td class="num" id="LN31">31</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes [--ref &lt;notes-ref&gt;] merge [-v | -q] [-s &lt;strategy&gt;] &lt;notes-ref&gt;"</span>)<span class='expansion'>("git notes [--ref &lt;notes-ref&gt;] merge [-v | -q] [-s &lt;strategy&gt;] &lt;notes-ref&gt;"<br>)</span></span>,</td></tr>
+<tr><td class="num" id="LN32">32</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes merge --commit [-v | -q]"</span>)<span class='expansion'>("git notes merge --commit [-v | -q]")</span></span>,</td></tr>
+<tr><td class="num" id="LN33">33</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes merge --abort [-v | -q]"</span>)<span class='expansion'>("git notes merge --abort [-v | -q]")</span></span>,</td></tr>
+<tr><td class="num" id="LN34">34</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes [--ref &lt;notes-ref&gt;] remove [&lt;object&gt;...]"</span>)<span class='expansion'>("git notes [--ref &lt;notes-ref&gt;] remove [&lt;object&gt;...]"<br>)</span></span>,</td></tr>
+<tr><td class="num" id="LN35">35</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes [--ref &lt;notes-ref&gt;] prune [-n | -v]"</span>)<span class='expansion'>("git notes [--ref &lt;notes-ref&gt;] prune [-n | -v]")</span></span>,</td></tr>
+<tr><td class="num" id="LN36">36</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes [--ref &lt;notes-ref&gt;] get-ref"</span>)<span class='expansion'>("git notes [--ref &lt;notes-ref&gt;] get-ref")</span></span>,</td></tr>
+<tr><td class="num" id="LN37">37</td><td class="line">	<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span></td></tr>
+<tr><td class="num" id="LN38">38</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN39">39</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN40">40</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> * <span class='keyword'>const</span> git_notes_list_usage[] = {</td></tr>
+<tr><td class="num" id="LN41">41</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes [list [&lt;object&gt;]]"</span>)<span class='expansion'>("git notes [list [&lt;object&gt;]]")</span></span>,</td></tr>
+<tr><td class="num" id="LN42">42</td><td class="line">	<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span></td></tr>
+<tr><td class="num" id="LN43">43</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN44">44</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN45">45</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> * <span class='keyword'>const</span> git_notes_add_usage[] = {</td></tr>
+<tr><td class="num" id="LN46">46</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes add [&lt;options&gt;] [&lt;object&gt;]"</span>)<span class='expansion'>("git notes add [&lt;options&gt;] [&lt;object&gt;]")</span></span>,</td></tr>
+<tr><td class="num" id="LN47">47</td><td class="line">	<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span></td></tr>
+<tr><td class="num" id="LN48">48</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN49">49</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN50">50</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> * <span class='keyword'>const</span> git_notes_copy_usage[] = {</td></tr>
+<tr><td class="num" id="LN51">51</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes copy [&lt;options&gt;] &lt;from-object&gt; &lt;to-object&gt;"</span>)<span class='expansion'>("git notes copy [&lt;options&gt;] &lt;from-object&gt; &lt;to-object&gt;"<br>)</span></span>,</td></tr>
+<tr><td class="num" id="LN52">52</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes copy --stdin [&lt;from-object&gt; &lt;to-object&gt;]..."</span>)<span class='expansion'>("git notes copy --stdin [&lt;from-object&gt; &lt;to-object&gt;]..."<br>)</span></span>,</td></tr>
+<tr><td class="num" id="LN53">53</td><td class="line">	<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span></td></tr>
+<tr><td class="num" id="LN54">54</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN55">55</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN56">56</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> * <span class='keyword'>const</span> git_notes_append_usage[] = {</td></tr>
+<tr><td class="num" id="LN57">57</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes append [&lt;options&gt;] [&lt;object&gt;]"</span>)<span class='expansion'>("git notes append [&lt;options&gt;] [&lt;object&gt;]")</span></span>,</td></tr>
+<tr><td class="num" id="LN58">58</td><td class="line">	<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span></td></tr>
+<tr><td class="num" id="LN59">59</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN60">60</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN61">61</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> * <span class='keyword'>const</span> git_notes_edit_usage[] = {</td></tr>
+<tr><td class="num" id="LN62">62</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes edit [&lt;object&gt;]"</span>)<span class='expansion'>("git notes edit [&lt;object&gt;]")</span></span>,</td></tr>
+<tr><td class="num" id="LN63">63</td><td class="line">	<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span></td></tr>
+<tr><td class="num" id="LN64">64</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN65">65</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN66">66</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> * <span class='keyword'>const</span> git_notes_show_usage[] = {</td></tr>
+<tr><td class="num" id="LN67">67</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes show [&lt;object&gt;]"</span>)<span class='expansion'>("git notes show [&lt;object&gt;]")</span></span>,</td></tr>
+<tr><td class="num" id="LN68">68</td><td class="line">	<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span></td></tr>
+<tr><td class="num" id="LN69">69</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN70">70</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN71">71</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> * <span class='keyword'>const</span> git_notes_merge_usage[] = {</td></tr>
+<tr><td class="num" id="LN72">72</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes merge [&lt;options&gt;] &lt;notes-ref&gt;"</span>)<span class='expansion'>("git notes merge [&lt;options&gt;] &lt;notes-ref&gt;")</span></span>,</td></tr>
+<tr><td class="num" id="LN73">73</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes merge --commit [&lt;options&gt;]"</span>)<span class='expansion'>("git notes merge --commit [&lt;options&gt;]")</span></span>,</td></tr>
+<tr><td class="num" id="LN74">74</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes merge --abort [&lt;options&gt;]"</span>)<span class='expansion'>("git notes merge --abort [&lt;options&gt;]")</span></span>,</td></tr>
+<tr><td class="num" id="LN75">75</td><td class="line">	<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span></td></tr>
+<tr><td class="num" id="LN76">76</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN77">77</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN78">78</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> * <span class='keyword'>const</span> git_notes_remove_usage[] = {</td></tr>
+<tr><td class="num" id="LN79">79</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes remove [&lt;object&gt;]"</span>)<span class='expansion'>("git notes remove [&lt;object&gt;]")</span></span>,</td></tr>
+<tr><td class="num" id="LN80">80</td><td class="line">	<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span></td></tr>
+<tr><td class="num" id="LN81">81</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN82">82</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN83">83</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> * <span class='keyword'>const</span> git_notes_prune_usage[] = {</td></tr>
+<tr><td class="num" id="LN84">84</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes prune [&lt;options&gt;]"</span>)<span class='expansion'>("git notes prune [&lt;options&gt;]")</span></span>,</td></tr>
+<tr><td class="num" id="LN85">85</td><td class="line">	<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span></td></tr>
+<tr><td class="num" id="LN86">86</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN87">87</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN88">88</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> * <span class='keyword'>const</span> git_notes_get_ref_usage[] = {</td></tr>
+<tr><td class="num" id="LN89">89</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git notes get-ref"</span>)<span class='expansion'>("git notes get-ref")</span></span>,</td></tr>
+<tr><td class="num" id="LN90">90</td><td class="line">	<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span></td></tr>
+<tr><td class="num" id="LN91">91</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN92">92</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN93">93</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> note_template[] =</td></tr>
+<tr><td class="num" id="LN94">94</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"Write/edit the notes for the following object:"</span>)<span class='expansion'>("Write/edit the notes for the following object:")</span></span>;</td></tr>
+<tr><td class="num" id="LN95">95</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN96">96</td><td class="line"><span class='keyword'>struct</span> note_data {</td></tr>
+<tr><td class="num" id="LN97">97</td><td class="line">	<span class='keyword'>int</span> given;</td></tr>
+<tr><td class="num" id="LN98">98</td><td class="line">	<span class='keyword'>int</span> use_editor;</td></tr>
+<tr><td class="num" id="LN99">99</td><td class="line">	<span class='keyword'>char</span> *edit_path;</td></tr>
+<tr><td class="num" id="LN100">100</td><td class="line">	<span class='keyword'>struct</span> strbuf buf;</td></tr>
+<tr><td class="num" id="LN101">101</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN102">102</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN103">103</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> free_note_data(<span class='keyword'>struct</span> note_data *d)</td></tr>
+<tr><td class="num" id="LN104">104</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN105">105</td><td class="line">	<span class='keyword'>if</span> (d-&gt;edit_path) {</td></tr>
+<tr><td class="num" id="LN106">106</td><td class="line">		unlink_or_warn(d-&gt;edit_path);</td></tr>
+<tr><td class="num" id="LN107">107</td><td class="line">		free(d-&gt;edit_path);</td></tr>
+<tr><td class="num" id="LN108">108</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN109">109</td><td class="line">	strbuf_release(&amp;d-&gt;buf);</td></tr>
+<tr><td class="num" id="LN110">110</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN111">111</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN112">112</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> list_each_note(<span class='keyword'>const</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> *object_sha1,</td></tr>
+<tr><td class="num" id="LN113">113</td><td class="line">		<span class='keyword'>const</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> *note_sha1, <span class='keyword'>char</span> *note_path,</td></tr>
+<tr><td class="num" id="LN114">114</td><td class="line">		<span class='keyword'>void</span> *cb_data)</td></tr>
+<tr><td class="num" id="LN115">115</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN116">116</td><td class="line">	printf(<span class='string_literal'>"%s %s\n"</span>, sha1_to_hex(note_sha1), sha1_to_hex(object_sha1));</td></tr>
+<tr><td class="num" id="LN117">117</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN118">118</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN119">119</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN120">120</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> copy_obj_to_fd(<span class='keyword'>int</span> fd, <span class='keyword'>const</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> *sha1)</td></tr>
+<tr><td class="num" id="LN121">121</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN122">122</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>long</span> size;</td></tr>
+<tr><td class="num" id="LN123">123</td><td class="line">	<span class='keyword'>enum</span> object_type type;</td></tr>
+<tr><td class="num" id="LN124">124</td><td class="line">	<span class='keyword'>char</span> *buf = read_sha1_file(sha1, &amp;type, &amp;size);</td></tr>
+<tr><td class="num" id="LN125">125</td><td class="line">	<span class='keyword'>if</span> (buf) {</td></tr>
+<tr><td class="num" id="LN126">126</td><td class="line">		<span class='keyword'>if</span> (size)</td></tr>
+<tr><td class="num" id="LN127">127</td><td class="line">			write_or_die(fd, buf, size);</td></tr>
+<tr><td class="num" id="LN128">128</td><td class="line">		free(buf);</td></tr>
+<tr><td class="num" id="LN129">129</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN130">130</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN131">131</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN132">132</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> write_commented_object(<span class='keyword'>int</span> fd, <span class='keyword'>const</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> *object)</td></tr>
+<tr><td class="num" id="LN133">133</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN134">134</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *show_args[5] =</td></tr>
+<tr><td class="num" id="LN135">135</td><td class="line">		{<span class='string_literal'>"show"</span>, <span class='string_literal'>"--stat"</span>, <span class='string_literal'>"--no-notes"</span>, sha1_to_hex(object), <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>};</td></tr>
+<tr><td class="num" id="LN136">136</td><td class="line">	<span class='keyword'>struct</span> child_process show = <span class='macro'>CHILD_PROCESS_INIT<span class='expansion'>{ ((void*)0), { empty_argv, 0, 0 }, { empty_argv, 0, 0 } }</span></span>;</td></tr>
+<tr><td class="num" id="LN137">137</td><td class="line">	<span class='keyword'>struct</span> strbuf buf = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN138">138</td><td class="line">	<span class='keyword'>struct</span> strbuf cbuf = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN139">139</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN140">140</td><td class="line">	<span class='comment'>/* Invoke "git show --stat --no-notes $object" */</span></td></tr>
+<tr><td class="num" id="LN141">141</td><td class="line">	show.argv = show_args;</td></tr>
+<tr><td class="num" id="LN142">142</td><td class="line">	show.no_stdin = 1;</td></tr>
+<tr><td class="num" id="LN143">143</td><td class="line">	show.out = -1;</td></tr>
+<tr><td class="num" id="LN144">144</td><td class="line">	show.err = 0;</td></tr>
+<tr><td class="num" id="LN145">145</td><td class="line">	show.git_cmd = 1;</td></tr>
+<tr><td class="num" id="LN146">146</td><td class="line">	<span class='keyword'>if</span> (start_command(&amp;show))</td></tr>
+<tr><td class="num" id="LN147">147</td><td class="line">		die(_(<span class='string_literal'>"unable to start 'show' for object '%s'"</span>),</td></tr>
+<tr><td class="num" id="LN148">148</td><td class="line">		    sha1_to_hex(object));</td></tr>
+<tr><td class="num" id="LN149">149</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN150">150</td><td class="line">	<span class='keyword'>if</span> (strbuf_read(&amp;buf, show.out, 0) &lt; 0)</td></tr>
+<tr><td class="num" id="LN151">151</td><td class="line">		die_errno(_(<span class='string_literal'>"could not read 'show' output"</span>));</td></tr>
+<tr><td class="num" id="LN152">152</td><td class="line">	strbuf_add_commented_lines(&amp;cbuf, buf.buf, buf.len);</td></tr>
+<tr><td class="num" id="LN153">153</td><td class="line">	write_or_die(fd, cbuf.buf, cbuf.len);</td></tr>
+<tr><td class="num" id="LN154">154</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN155">155</td><td class="line">	strbuf_release(&amp;cbuf);</td></tr>
+<tr><td class="num" id="LN156">156</td><td class="line">	strbuf_release(&amp;buf);</td></tr>
+<tr><td class="num" id="LN157">157</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN158">158</td><td class="line">	<span class='keyword'>if</span> (finish_command(&amp;show))</td></tr>
+<tr><td class="num" id="LN159">159</td><td class="line">		die(_(<span class='string_literal'>"failed to finish 'show' for object '%s'"</span>),</td></tr>
+<tr><td class="num" id="LN160">160</td><td class="line">		    sha1_to_hex(object));</td></tr>
+<tr><td class="num" id="LN161">161</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN162">162</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN163">163</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> prepare_note_data(<span class='keyword'>const</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> *object, <span class='keyword'>struct</span> note_data *d,</td></tr>
+<tr><td class="num" id="LN164">164</td><td class="line">		<span class='keyword'>const</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> *old_note)</td></tr>
+<tr><td class="num" id="LN165">165</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN166">166</td><td class="line">	<span class='keyword'>if</span> (d-&gt;use_editor || !d-&gt;given) {</td></tr>
+<tr><td class="num" id="LN167">167</td><td class="line">		<span class='keyword'>int</span> fd;</td></tr>
+<tr><td class="num" id="LN168">168</td><td class="line">		<span class='keyword'>struct</span> strbuf buf = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN169">169</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN170">170</td><td class="line">		<span class='comment'>/* write the template message before editing: */</span></td></tr>
+<tr><td class="num" id="LN171">171</td><td class="line">		d-&gt;edit_path = git_pathdup(<span class='string_literal'>"NOTES_EDITMSG"</span>);</td></tr>
+<tr><td class="num" id="LN172">172</td><td class="line">		fd = open(d-&gt;edit_path, <span class='macro'>O_CREAT<span class='expansion'>0x0200</span></span> | <span class='macro'>O_TRUNC<span class='expansion'>0x0400</span></span> | <span class='macro'>O_WRONLY<span class='expansion'>0x0001</span></span>, 0600);</td></tr>
+<tr><td class="num" id="LN173">173</td><td class="line">		<span class='keyword'>if</span> (fd &lt; 0)</td></tr>
+<tr><td class="num" id="LN174">174</td><td class="line">			die_errno(_(<span class='string_literal'>"could not create file '%s'"</span>), d-&gt;edit_path);</td></tr>
+<tr><td class="num" id="LN175">175</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN176">176</td><td class="line">		<span class='keyword'>if</span> (d-&gt;given)</td></tr>
+<tr><td class="num" id="LN177">177</td><td class="line">			write_or_die(fd, d-&gt;buf.buf, d-&gt;buf.len);</td></tr>
+<tr><td class="num" id="LN178">178</td><td class="line">		<span class='keyword'>else</span> <span class='keyword'>if</span> (old_note)</td></tr>
+<tr><td class="num" id="LN179">179</td><td class="line">			copy_obj_to_fd(fd, old_note);</td></tr>
+<tr><td class="num" id="LN180">180</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN181">181</td><td class="line">		strbuf_addch(&amp;buf, '\n');</td></tr>
+<tr><td class="num" id="LN182">182</td><td class="line">		strbuf_add_commented_lines(&amp;buf, <span class='string_literal'>"\n"</span>, strlen(<span class='string_literal'>"\n"</span>));</td></tr>
+<tr><td class="num" id="LN183">183</td><td class="line">		strbuf_add_commented_lines(&amp;buf, _(note_template), strlen(_(note_template)));</td></tr>
+<tr><td class="num" id="LN184">184</td><td class="line">		strbuf_addch(&amp;buf, '\n');</td></tr>
+<tr><td class="num" id="LN185">185</td><td class="line">		write_or_die(fd, buf.buf, buf.len);</td></tr>
+<tr><td class="num" id="LN186">186</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN187">187</td><td class="line">		write_commented_object(fd, object);</td></tr>
+<tr><td class="num" id="LN188">188</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN189">189</td><td class="line">		close(fd);</td></tr>
+<tr><td class="num" id="LN190">190</td><td class="line">		strbuf_release(&amp;buf);</td></tr>
+<tr><td class="num" id="LN191">191</td><td class="line">		<span class='macro'>strbuf_reset(&amp;d-&gt;buf)<span class='expansion'>strbuf_setlen(&amp;d-&gt;buf, 0)</span></span>;</td></tr>
+<tr><td class="num" id="LN192">192</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN193">193</td><td class="line">		<span class='keyword'>if</span> (launch_editor(d-&gt;edit_path, &amp;d-&gt;buf, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>)) {</td></tr>
+<tr><td class="num" id="LN194">194</td><td class="line">			die(_(<span class='string_literal'>"please supply the note contents using either -m or -F option"</span>));</td></tr>
+<tr><td class="num" id="LN195">195</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN196">196</td><td class="line">		strbuf_stripspace(&amp;d-&gt;buf, 1);</td></tr>
+<tr><td class="num" id="LN197">197</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN198">198</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN199">199</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN200">200</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> write_note_data(<span class='keyword'>struct</span> note_data *d, <span class='keyword'>unsigned</span> <span class='keyword'>char</span> *sha1)</td></tr>
+<tr><td class="num" id="LN201">201</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN202">202</td><td class="line">	<span class='keyword'>if</span> (write_sha1_file(d-&gt;buf.buf, d-&gt;buf.len, blob_type, sha1)) {</td></tr>
+<tr><td class="num" id="LN203">203</td><td class="line">		<span class='macro'>error(_(<span class='string_literal'>"unable to write note object"</span>))<span class='expansion'>(error(_("unable to write note object")), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN204">204</td><td class="line">		<span class='keyword'>if</span> (d-&gt;edit_path)</td></tr>
+<tr><td class="num" id="LN205">205</td><td class="line">			<span class='macro'>error(_(<span class='string_literal'>"the note contents have been left in %s"</span>),<span class='expansion'>(error(_("the note contents have been left in %s"), d-&gt;edit_path<br>), const_error())</span></span></td></tr>
+<tr><td class="num" id="LN206">206</td><td class="line">				<span class='macro'>d-&gt;edit_path)<span class='expansion'>(error(_("the note contents have been left in %s"), d-&gt;edit_path<br>), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN207">207</td><td class="line">		exit(128);</td></tr>
+<tr><td class="num" id="LN208">208</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN209">209</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN210">210</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN211">211</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> parse_msg_arg(<span class='keyword'>const</span> <span class='keyword'>struct</span> option *opt, <span class='keyword'>const</span> <span class='keyword'>char</span> *arg, <span class='keyword'>int</span> unset)</td></tr>
+<tr><td class="num" id="LN212">212</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN213">213</td><td class="line">	<span class='keyword'>struct</span> note_data *d = opt-&gt;value;</td></tr>
+<tr><td class="num" id="LN214">214</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN215">215</td><td class="line">	strbuf_grow(&amp;d-&gt;buf, strlen(arg) + 2);</td></tr>
+<tr><td class="num" id="LN216">216</td><td class="line">	<span class='keyword'>if</span> (d-&gt;buf.len)</td></tr>
+<tr><td class="num" id="LN217">217</td><td class="line">		strbuf_addch(&amp;d-&gt;buf, '\n');</td></tr>
+<tr><td class="num" id="LN218">218</td><td class="line">	strbuf_addstr(&amp;d-&gt;buf, arg);</td></tr>
+<tr><td class="num" id="LN219">219</td><td class="line">	strbuf_stripspace(&amp;d-&gt;buf, 0);</td></tr>
+<tr><td class="num" id="LN220">220</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN221">221</td><td class="line">	d-&gt;given = 1;</td></tr>
+<tr><td class="num" id="LN222">222</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN223">223</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN224">224</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN225">225</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> parse_file_arg(<span class='keyword'>const</span> <span class='keyword'>struct</span> option *opt, <span class='keyword'>const</span> <span class='keyword'>char</span> *arg, <span class='keyword'>int</span> unset)</td></tr>
+<tr><td class="num" id="LN226">226</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN227">227</td><td class="line">	<span class='keyword'>struct</span> note_data *d = opt-&gt;value;</td></tr>
+<tr><td class="num" id="LN228">228</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN229">229</td><td class="line">	<span class='keyword'>if</span> (d-&gt;buf.len)</td></tr>
+<tr><td class="num" id="LN230">230</td><td class="line">		strbuf_addch(&amp;d-&gt;buf, '\n');</td></tr>
+<tr><td class="num" id="LN231">231</td><td class="line">	<span class='keyword'>if</span> (!strcmp(arg, <span class='string_literal'>"-"</span>)) {</td></tr>
+<tr><td class="num" id="LN232">232</td><td class="line">		<span class='keyword'>if</span> (strbuf_read(&amp;d-&gt;buf, 0, 1024) &lt; 0)</td></tr>
+<tr><td class="num" id="LN233">233</td><td class="line">			die_errno(_(<span class='string_literal'>"cannot read '%s'"</span>), arg);</td></tr>
+<tr><td class="num" id="LN234">234</td><td class="line">	} <span class='keyword'>else</span> <span class='keyword'>if</span> (strbuf_read_file(&amp;d-&gt;buf, arg, 1024) &lt; 0)</td></tr>
+<tr><td class="num" id="LN235">235</td><td class="line">		die_errno(_(<span class='string_literal'>"could not open or read '%s'"</span>), arg);</td></tr>
+<tr><td class="num" id="LN236">236</td><td class="line">	strbuf_stripspace(&amp;d-&gt;buf, 0);</td></tr>
+<tr><td class="num" id="LN237">237</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN238">238</td><td class="line">	d-&gt;given = 1;</td></tr>
+<tr><td class="num" id="LN239">239</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN240">240</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN241">241</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN242">242</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> parse_reuse_arg(<span class='keyword'>const</span> <span class='keyword'>struct</span> option *opt, <span class='keyword'>const</span> <span class='keyword'>char</span> *arg, <span class='keyword'>int</span> unset)</td></tr>
+<tr><td class="num" id="LN243">243</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN244">244</td><td class="line">	<span class='keyword'>struct</span> note_data *d = opt-&gt;value;</td></tr>
+<tr><td class="num" id="LN245">245</td><td class="line">	<span class='keyword'>char</span> *buf;</td></tr>
+<tr><td class="num" id="LN246">246</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> object[20];</td></tr>
+<tr><td class="num" id="LN247">247</td><td class="line">	<span class='keyword'>enum</span> object_type type;</td></tr>
+<tr><td class="num" id="LN248">248</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>long</span> len;</td></tr>
+<tr><td class="num" id="LN249">249</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN250">250</td><td class="line">	<span class='keyword'>if</span> (d-&gt;buf.len)</td></tr>
+<tr><td class="num" id="LN251">251</td><td class="line">		strbuf_addch(&amp;d-&gt;buf, '\n');</td></tr>
+<tr><td class="num" id="LN252">252</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN253">253</td><td class="line">	<span class='keyword'>if</span> (get_sha1(arg, object))</td></tr>
+<tr><td class="num" id="LN254">254</td><td class="line">		die(_(<span class='string_literal'>"failed to resolve '%s' as a valid ref."</span>), arg);</td></tr>
+<tr><td class="num" id="LN255">255</td><td class="line">	<span class='keyword'>if</span> (!(buf = read_sha1_file(object, &amp;type, &amp;len))) {</td></tr>
+<tr><td class="num" id="LN256">256</td><td class="line">		free(buf);</td></tr>
+<tr><td class="num" id="LN257">257</td><td class="line">		die(_(<span class='string_literal'>"failed to read object '%s'."</span>), arg);</td></tr>
+<tr><td class="num" id="LN258">258</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN259">259</td><td class="line">	<span class='keyword'>if</span> (type != OBJ_BLOB) {</td></tr>
+<tr><td class="num" id="LN260">260</td><td class="line">		free(buf);</td></tr>
+<tr><td class="num" id="LN261">261</td><td class="line">		die(_(<span class='string_literal'>"cannot read note data from non-blob object '%s'."</span>), arg);</td></tr>
+<tr><td class="num" id="LN262">262</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN263">263</td><td class="line">	strbuf_add(&amp;d-&gt;buf, buf, len);</td></tr>
+<tr><td class="num" id="LN264">264</td><td class="line">	free(buf);</td></tr>
+<tr><td class="num" id="LN265">265</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN266">266</td><td class="line">	d-&gt;given = 1;</td></tr>
+<tr><td class="num" id="LN267">267</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN268">268</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN269">269</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN270">270</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> parse_reedit_arg(<span class='keyword'>const</span> <span class='keyword'>struct</span> option *opt, <span class='keyword'>const</span> <span class='keyword'>char</span> *arg, <span class='keyword'>int</span> unset)</td></tr>
+<tr><td class="num" id="LN271">271</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN272">272</td><td class="line">	<span class='keyword'>struct</span> note_data *d = opt-&gt;value;</td></tr>
+<tr><td class="num" id="LN273">273</td><td class="line">	d-&gt;use_editor = 1;</td></tr>
+<tr><td class="num" id="LN274">274</td><td class="line">	<span class='keyword'>return</span> parse_reuse_arg(opt, arg, unset);</td></tr>
+<tr><td class="num" id="LN275">275</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN276">276</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN277">277</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> notes_copy_from_stdin(<span class='keyword'>int</span> force, <span class='keyword'>const</span> <span class='keyword'>char</span> *rewrite_cmd)</td></tr>
+<tr><td class="num" id="LN278">278</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN279">279</td><td class="line">	<span class='keyword'>struct</span> strbuf buf = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN280">280</td><td class="line">	<span class='keyword'>struct</span> notes_rewrite_cfg *c = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN281">281</td><td class="line">	<span class='keyword'>struct</span> notes_tree *t = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN282">282</td><td class="line">	<span class='keyword'>int</span> ret = 0;</td></tr>
+<tr><td class="num" id="LN283">283</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *msg = <span class='string_literal'>"Notes added by 'git notes copy'"</span>;</td></tr>
+<tr><td class="num" id="LN284">284</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN285">285</td><td class="line">	<span class='keyword'>if</span> (rewrite_cmd) {</td></tr>
+<tr><td class="num" id="LN286">286</td><td class="line">		c = init_copy_notes_for_rewrite(rewrite_cmd);</td></tr>
+<tr><td class="num" id="LN287">287</td><td class="line">		<span class='keyword'>if</span> (!c)</td></tr>
+<tr><td class="num" id="LN288">288</td><td class="line">			<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN289">289</td><td class="line">	} <span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN290">290</td><td class="line">		init_notes(<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, <span class='macro'>NOTES_INIT_WRITABLE<span class='expansion'>2</span></span>);</td></tr>
+<tr><td class="num" id="LN291">291</td><td class="line">		t = &amp;default_notes_tree;</td></tr>
+<tr><td class="num" id="LN292">292</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN293">293</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN294">294</td><td class="line">	<span class='keyword'>while</span> (strbuf_getline_lf(&amp;buf, <span class='macro'>stdin<span class='expansion'>__stdinp</span></span>) != <span class='macro'>EOF<span class='expansion'>(-1)</span></span>) {</td></tr>
+<tr><td class="num" id="LN295">295</td><td class="line">		<span class='keyword'>unsigned</span> <span class='keyword'>char</span> from_obj[20], to_obj[20];</td></tr>
+<tr><td class="num" id="LN296">296</td><td class="line">		<span class='keyword'>struct</span> strbuf **split;</td></tr>
+<tr><td class="num" id="LN297">297</td><td class="line">		<span class='keyword'>int</span> err;</td></tr>
+<tr><td class="num" id="LN298">298</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN299">299</td><td class="line">		split = strbuf_split(&amp;buf, ' ');</td></tr>
+<tr><td class="num" id="LN300">300</td><td class="line">		<span class='keyword'>if</span> (!split[0] || !split[1])</td></tr>
+<tr><td class="num" id="LN301">301</td><td class="line">			die(_(<span class='string_literal'>"malformed input line: '%s'."</span>), buf.buf);</td></tr>
+<tr><td class="num" id="LN302">302</td><td class="line">		strbuf_rtrim(split[0]);</td></tr>
+<tr><td class="num" id="LN303">303</td><td class="line">		strbuf_rtrim(split[1]);</td></tr>
+<tr><td class="num" id="LN304">304</td><td class="line">		<span class='keyword'>if</span> (get_sha1(split[0]-&gt;buf, from_obj))</td></tr>
+<tr><td class="num" id="LN305">305</td><td class="line">			die(_(<span class='string_literal'>"failed to resolve '%s' as a valid ref."</span>), split[0]-&gt;buf);</td></tr>
+<tr><td class="num" id="LN306">306</td><td class="line">		<span class='keyword'>if</span> (get_sha1(split[1]-&gt;buf, to_obj))</td></tr>
+<tr><td class="num" id="LN307">307</td><td class="line">			die(_(<span class='string_literal'>"failed to resolve '%s' as a valid ref."</span>), split[1]-&gt;buf);</td></tr>
+<tr><td class="num" id="LN308">308</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN309">309</td><td class="line">		<span class='keyword'>if</span> (rewrite_cmd)</td></tr>
+<tr><td class="num" id="LN310">310</td><td class="line">			err = copy_note_for_rewrite(c, from_obj, to_obj);</td></tr>
+<tr><td class="num" id="LN311">311</td><td class="line">		<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN312">312</td><td class="line">			err = copy_note(t, from_obj, to_obj, force,</td></tr>
+<tr><td class="num" id="LN313">313</td><td class="line">					combine_notes_overwrite);</td></tr>
+<tr><td class="num" id="LN314">314</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN315">315</td><td class="line">		<span class='keyword'>if</span> (err) {</td></tr>
+<tr><td class="num" id="LN316">316</td><td class="line">			<span class='macro'>error(_(<span class='string_literal'>"failed to copy notes from '%s' to '%s'"</span>),<span class='expansion'>(error(_("failed to copy notes from '%s' to '%s'"), split[0]-&gt;<br>buf, split[1]-&gt;buf), const_error())</span></span></td></tr>
+<tr><td class="num" id="LN317">317</td><td class="line">			      <span class='macro'>split[0]-&gt;buf, split[1]-&gt;buf)<span class='expansion'>(error(_("failed to copy notes from '%s' to '%s'"), split[0]-&gt;<br>buf, split[1]-&gt;buf), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN318">318</td><td class="line">			ret = 1;</td></tr>
+<tr><td class="num" id="LN319">319</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN320">320</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN321">321</td><td class="line">		strbuf_list_free(split);</td></tr>
+<tr><td class="num" id="LN322">322</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN323">323</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN324">324</td><td class="line">	<span class='keyword'>if</span> (!rewrite_cmd) {</td></tr>
+<tr><td class="num" id="LN325">325</td><td class="line">		commit_notes(t, msg);</td></tr>
+<tr><td class="num" id="LN326">326</td><td class="line">		free_notes(t);</td></tr>
+<tr><td class="num" id="LN327">327</td><td class="line">	} <span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN328">328</td><td class="line">		finish_copy_notes_for_rewrite(c, msg);</td></tr>
+<tr><td class="num" id="LN329">329</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN330">330</td><td class="line">	<span class='keyword'>return</span> ret;</td></tr>
+<tr><td class="num" id="LN331">331</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN332">332</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN333">333</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>struct</span> notes_tree *init_notes_check(<span class='keyword'>const</span> <span class='keyword'>char</span> *subcommand,</td></tr>
+<tr><td class="num" id="LN334">334</td><td class="line">					   <span class='keyword'>int</span> flags)</td></tr>
+<tr><td class="num" id="LN335">335</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN336">336</td><td class="line">	<span class='keyword'>struct</span> notes_tree *t;</td></tr>
+<tr><td class="num" id="LN337">337</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *ref;</td></tr>
+<tr><td class="num" id="LN338">338</td><td class="line">	init_notes(<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, flags);</td></tr>
+<tr><td class="num" id="LN339">339</td><td class="line">	t = &amp;default_notes_tree;</td></tr>
+<tr><td class="num" id="LN340">340</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN341">341</td><td class="line">	ref = (flags &amp; <span class='macro'>NOTES_INIT_WRITABLE<span class='expansion'>2</span></span>) ? t-&gt;update_ref : t-&gt;ref;</td></tr>
+<tr><td class="num" id="LN342">342</td><td class="line">	<span class='keyword'>if</span> (!starts_with(ref, <span class='string_literal'>"refs/notes/"</span>))</td></tr>
+<tr><td class="num" id="LN343">343</td><td class="line">		<span class='comment'>/* TRANSLATORS: the first %s will be replaced by a</span></td></tr>
+<tr><td class="num" id="LN344">344</td><td class="line">		   <span class='comment'>git notes command: 'add', 'merge', 'remove', etc.*/</span></td></tr>
+<tr><td class="num" id="LN345">345</td><td class="line">		die(_(<span class='string_literal'>"refusing to %s notes in %s (outside of refs/notes/)"</span>),</td></tr>
+<tr><td class="num" id="LN346">346</td><td class="line">		    subcommand, ref);</td></tr>
+<tr><td class="num" id="LN347">347</td><td class="line">	<span class='keyword'>return</span> t;</td></tr>
+<tr><td class="num" id="LN348">348</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN349">349</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN350">350</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> list(<span class='keyword'>int</span> argc, <span class='keyword'>const</span> <span class='keyword'>char</span> **argv, <span class='keyword'>const</span> <span class='keyword'>char</span> *prefix)</td></tr>
+<tr><td class="num" id="LN351">351</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN352">352</td><td class="line">	<span class='keyword'>struct</span> notes_tree *t;</td></tr>
+<tr><td class="num" id="LN353">353</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> object[20];</td></tr>
+<tr><td class="num" id="LN354">354</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> *note;</td></tr>
+<tr><td class="num" id="LN355">355</td><td class="line">	<span class='keyword'>int</span> retval = -1;</td></tr>
+<tr><td class="num" id="LN356">356</td><td class="line">	<span class='keyword'>struct</span> option options[] = {</td></tr>
+<tr><td class="num" id="LN357">357</td><td class="line">		<span class='macro'>OPT_END()<span class='expansion'>{ OPTION_END }</span></span></td></tr>
+<tr><td class="num" id="LN358">358</td><td class="line">	};</td></tr>
+<tr><td class="num" id="LN359">359</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN360">360</td><td class="line">	<span class='keyword'>if</span> (argc)</td></tr>
+<tr><td class="num" id="LN361">361</td><td class="line">		argc = parse_options(argc, argv, prefix, options,</td></tr>
+<tr><td class="num" id="LN362">362</td><td class="line">				     git_notes_list_usage, 0);</td></tr>
+<tr><td class="num" id="LN363">363</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN364">364</td><td class="line">	<span class='keyword'>if</span> (1 &lt; argc) {</td></tr>
+<tr><td class="num" id="LN365">365</td><td class="line">		<span class='macro'>error(_(<span class='string_literal'>"too many parameters"</span>))<span class='expansion'>(error(_("too many parameters")), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN366">366</td><td class="line">		usage_with_options(git_notes_list_usage, options);</td></tr>
+<tr><td class="num" id="LN367">367</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN368">368</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN369">369</td><td class="line">	t = init_notes_check(<span class='string_literal'>"list"</span>, 0);</td></tr>
+<tr><td class="num" id="LN370">370</td><td class="line">	<span class='keyword'>if</span> (argc) {</td></tr>
+<tr><td class="num" id="LN371">371</td><td class="line">		<span class='keyword'>if</span> (get_sha1(argv[0], object))</td></tr>
+<tr><td class="num" id="LN372">372</td><td class="line">			die(_(<span class='string_literal'>"failed to resolve '%s' as a valid ref."</span>), argv[0]);</td></tr>
+<tr><td class="num" id="LN373">373</td><td class="line">		note = get_note(t, object);</td></tr>
+<tr><td class="num" id="LN374">374</td><td class="line">		<span class='keyword'>if</span> (note) {</td></tr>
+<tr><td class="num" id="LN375">375</td><td class="line">			puts(sha1_to_hex(note));</td></tr>
+<tr><td class="num" id="LN376">376</td><td class="line">			retval = 0;</td></tr>
+<tr><td class="num" id="LN377">377</td><td class="line">		} <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN378">378</td><td class="line">			retval = <span class='macro'>error(_(<span class='string_literal'>"no note found for object %s."</span>),<span class='expansion'>(error(_("no note found for object %s."), sha1_to_hex(object)<br>), const_error())</span></span></td></tr>
+<tr><td class="num" id="LN379">379</td><td class="line">				       <span class='macro'>sha1_to_hex(object))<span class='expansion'>(error(_("no note found for object %s."), sha1_to_hex(object)<br>), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN380">380</td><td class="line">	} <span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN381">381</td><td class="line">		retval = for_each_note(t, 0, list_each_note, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>);</td></tr>
+<tr><td class="num" id="LN382">382</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN383">383</td><td class="line">	free_notes(t);</td></tr>
+<tr><td class="num" id="LN384">384</td><td class="line">	<span class='keyword'>return</span> retval;</td></tr>
+<tr><td class="num" id="LN385">385</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN386">386</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN387">387</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> append_edit(<span class='keyword'>int</span> argc, <span class='keyword'>const</span> <span class='keyword'>char</span> **argv, <span class='keyword'>const</span> <span class='keyword'>char</span> *prefix);</td></tr>
+<tr><td class="num" id="LN388">388</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN389">389</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> add(<span class='keyword'>int</span> argc, <span class='keyword'>const</span> <span class='keyword'>char</span> **argv, <span class='keyword'>const</span> <span class='keyword'>char</span> *prefix)</td></tr>
+<tr><td class="num" id="LN390">390</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN391">391</td><td class="line">	<span class='keyword'>int</span> force = 0, allow_empty = 0;</td></tr>
+<tr><td class="num" id="LN392">392</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *object_ref;</td></tr>
+<tr><td class="num" id="LN393">393</td><td class="line">	<span class='keyword'>struct</span> notes_tree *t;</td></tr>
+<tr><td class="num" id="LN394">394</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> object[20], new_note[20];</td></tr>
+<tr><td class="num" id="LN395">395</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> *note;</td></tr>
+<tr><td class="num" id="LN396">396</td><td class="line">	<span class='keyword'>struct</span> note_data d = { 0, 0, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span> };</td></tr>
+<tr><td class="num" id="LN397">397</td><td class="line">	<span class='keyword'>struct</span> option options[] = {</td></tr>
+<tr><td class="num" id="LN398">398</td><td class="line">		{ OPTION_CALLBACK, 'm', <span class='string_literal'>"message"</span>, &amp;d, <span class='macro'>N_(<span class='string_literal'>"message"</span>)<span class='expansion'>("message")</span></span>,</td></tr>
+<tr><td class="num" id="LN399">399</td><td class="line">			<span class='macro'>N_(<span class='string_literal'>"note contents as a string"</span>)<span class='expansion'>("note contents as a string")</span></span>, PARSE_OPT_NONEG,</td></tr>
+<tr><td class="num" id="LN400">400</td><td class="line">			parse_msg_arg},</td></tr>
+<tr><td class="num" id="LN401">401</td><td class="line">		{ OPTION_CALLBACK, 'F', <span class='string_literal'>"file"</span>, &amp;d, <span class='macro'>N_(<span class='string_literal'>"file"</span>)<span class='expansion'>("file")</span></span>,</td></tr>
+<tr><td class="num" id="LN402">402</td><td class="line">			<span class='macro'>N_(<span class='string_literal'>"note contents in a file"</span>)<span class='expansion'>("note contents in a file")</span></span>, PARSE_OPT_NONEG,</td></tr>
+<tr><td class="num" id="LN403">403</td><td class="line">			parse_file_arg},</td></tr>
+<tr><td class="num" id="LN404">404</td><td class="line">		{ OPTION_CALLBACK, 'c', <span class='string_literal'>"reedit-message"</span>, &amp;d, <span class='macro'>N_(<span class='string_literal'>"object"</span>)<span class='expansion'>("object")</span></span>,</td></tr>
+<tr><td class="num" id="LN405">405</td><td class="line">			<span class='macro'>N_(<span class='string_literal'>"reuse and edit specified note object"</span>)<span class='expansion'>("reuse and edit specified note object")</span></span>, PARSE_OPT_NONEG,</td></tr>
+<tr><td class="num" id="LN406">406</td><td class="line">			parse_reedit_arg},</td></tr>
+<tr><td class="num" id="LN407">407</td><td class="line">		{ OPTION_CALLBACK, 'C', <span class='string_literal'>"reuse-message"</span>, &amp;d, <span class='macro'>N_(<span class='string_literal'>"object"</span>)<span class='expansion'>("object")</span></span>,</td></tr>
+<tr><td class="num" id="LN408">408</td><td class="line">			<span class='macro'>N_(<span class='string_literal'>"reuse specified note object"</span>)<span class='expansion'>("reuse specified note object")</span></span>, PARSE_OPT_NONEG,</td></tr>
+<tr><td class="num" id="LN409">409</td><td class="line">			parse_reuse_arg},</td></tr>
+<tr><td class="num" id="LN410">410</td><td class="line">		<span class='macro'>OPT_BOOL(0, <span class='string_literal'>"allow-empty"</span>, &amp;allow_empty,<span class='expansion'>{ OPTION_SET_INT, (0), ("allow-empty"), (&amp;allow_empty), (<br>(void*)0), (("allow storing empty note")), PARSE_OPT_NOARG, (<br>(void*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN411">411</td><td class="line">			<span class='macro'>N_(<span class='string_literal'>"allow storing empty note"</span>))<span class='expansion'>{ OPTION_SET_INT, (0), ("allow-empty"), (&amp;allow_empty), (<br>(void*)0), (("allow storing empty note")), PARSE_OPT_NOARG, (<br>(void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN412">412</td><td class="line">		<span class='macro'>OPT__FORCE(&amp;force, N_(<span class='string_literal'>"replace existing notes"</span>))<span class='expansion'>{ OPTION_COUNTUP, ('f'), ("force"), ((&amp;force)), ((void*)0<br>), ((("replace existing notes"))), PARSE_OPT_NOARG }</span></span>,</td></tr>
+<tr><td class="num" id="LN413">413</td><td class="line">		<span class='macro'>OPT_END()<span class='expansion'>{ OPTION_END }</span></span></td></tr>
+<tr><td class="num" id="LN414">414</td><td class="line">	};</td></tr>
+<tr><td class="num" id="LN415">415</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN416">416</td><td class="line">	argc = parse_options(argc, argv, prefix, options, git_notes_add_usage,</td></tr>
+<tr><td class="num" id="LN417">417</td><td class="line">			     PARSE_OPT_KEEP_ARGV0);</td></tr>
+<tr><td class="num" id="LN418">418</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN419">419</td><td class="line">	<span class='keyword'>if</span> (2 &lt; argc) {</td></tr>
+<tr><td class="num" id="LN420">420</td><td class="line">		<span class='macro'>error(_(<span class='string_literal'>"too many parameters"</span>))<span class='expansion'>(error(_("too many parameters")), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN421">421</td><td class="line">		usage_with_options(git_notes_add_usage, options);</td></tr>
+<tr><td class="num" id="LN422">422</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN423">423</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN424">424</td><td class="line">	object_ref = argc &gt; 1 ? argv[1] : <span class='string_literal'>"HEAD"</span>;</td></tr>
+<tr><td class="num" id="LN425">425</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN426">426</td><td class="line">	<span class='keyword'>if</span> (get_sha1(object_ref, object))</td></tr>
+<tr><td class="num" id="LN427">427</td><td class="line">		die(_(<span class='string_literal'>"failed to resolve '%s' as a valid ref."</span>), object_ref);</td></tr>
+<tr><td class="num" id="LN428">428</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN429">429</td><td class="line">	t = init_notes_check(<span class='string_literal'>"add"</span>, <span class='macro'>NOTES_INIT_WRITABLE<span class='expansion'>2</span></span>);</td></tr>
+<tr><td class="num" id="LN430">430</td><td class="line">	note = get_note(t, object);</td></tr>
+<tr><td class="num" id="LN431">431</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN432">432</td><td class="line">	<span class='keyword'>if</span> (note) {</td></tr>
+<tr><td class="num" id="LN433">433</td><td class="line">		<span class='keyword'>if</span> (!force) {</td></tr>
+<tr><td class="num" id="LN434">434</td><td class="line">			free_notes(t);</td></tr>
+<tr><td class="num" id="LN435">435</td><td class="line">			<span class='keyword'>if</span> (d.given) {</td></tr>
+<tr><td class="num" id="LN436">436</td><td class="line">				free_note_data(&amp;d);</td></tr>
+<tr><td class="num" id="LN437">437</td><td class="line">				<span class='keyword'>return</span> <span class='macro'>error(_(<span class='string_literal'>"Cannot add notes. "<span class='expansion'>(error(_("Cannot add notes. " "Found existing notes for object %s. "<br> "Use '-f' to overwrite existing notes"), sha1_to_hex(object)<br>), const_error())</span></span></span></td></tr>
+<tr><td class="num" id="LN438">438</td><td class="line">					<span class='string_literal'><span class='macro'>"Found existing notes for object %s. "<span class='expansion'>(error(_("Cannot add notes. " "Found existing notes for object %s. "<br> "Use '-f' to overwrite existing notes"), sha1_to_hex(object)<br>), const_error())</span></span></span></td></tr>
+<tr><td class="num" id="LN439">439</td><td class="line">					<span class='string_literal'><span class='macro'>"Use '-f' to overwrite existing notes"</span>),<span class='expansion'>(error(_("Cannot add notes. " "Found existing notes for object %s. "<br> "Use '-f' to overwrite existing notes"), sha1_to_hex(object)<br>), const_error())</span></span></td></tr>
+<tr><td class="num" id="LN440">440</td><td class="line">					<span class='macro'>sha1_to_hex(object))<span class='expansion'>(error(_("Cannot add notes. " "Found existing notes for object %s. "<br> "Use '-f' to overwrite existing notes"), sha1_to_hex(object)<br>), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN441">441</td><td class="line">			}</td></tr>
+<tr><td class="num" id="LN442">442</td><td class="line">			<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN443">443</td><td class="line">			 <span class='comment'>* Redirect to "edit" subcommand.</span></td></tr>
+<tr><td class="num" id="LN444">444</td><td class="line">			 <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN445">445</td><td class="line">			 <span class='comment'>* We only end up here if none of -m/-F/-c/-C or -f are</span></td></tr>
+<tr><td class="num" id="LN446">446</td><td class="line">			 <span class='comment'>* given. The original args are therefore still in</span></td></tr>
+<tr><td class="num" id="LN447">447</td><td class="line">			 <span class='comment'>* argv[0-1].</span></td></tr>
+<tr><td class="num" id="LN448">448</td><td class="line">			 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN449">449</td><td class="line">			argv[0] = <span class='string_literal'>"edit"</span>;</td></tr>
+<tr><td class="num" id="LN450">450</td><td class="line">			<span class='keyword'>return</span> append_edit(argc, argv, prefix);</td></tr>
+<tr><td class="num" id="LN451">451</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN452">452</td><td class="line">		fprintf(<span class='macro'>stderr<span class='expansion'>__stderrp</span></span>, _(<span class='string_literal'>"Overwriting existing notes for object %s\n"</span>),</td></tr>
+<tr><td class="num" id="LN453">453</td><td class="line">			sha1_to_hex(object));</td></tr>
+<tr><td class="num" id="LN454">454</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN455">455</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN456">456</td><td class="line">	prepare_note_data(object, &amp;d, note);</td></tr>
+<tr><td class="num" id="LN457">457</td><td class="line">	<span class='keyword'>if</span> (d.buf.len || allow_empty) {</td></tr>
+<tr><td class="num" id="LN458">458</td><td class="line">		write_note_data(&amp;d, new_note);</td></tr>
+<tr><td class="num" id="LN459">459</td><td class="line">		<span class='keyword'>if</span> (add_note(t, object, new_note, combine_notes_overwrite))</td></tr>
+<tr><td class="num" id="LN460">460</td><td class="line">			die(<span class='string_literal'>"BUG: combine_notes_overwrite failed"</span>);</td></tr>
+<tr><td class="num" id="LN461">461</td><td class="line">		commit_notes(t, <span class='string_literal'>"Notes added by 'git notes add'"</span>);</td></tr>
+<tr><td class="num" id="LN462">462</td><td class="line">	} <span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN463">463</td><td class="line">		fprintf(<span class='macro'>stderr<span class='expansion'>__stderrp</span></span>, _(<span class='string_literal'>"Removing note for object %s\n"</span>),</td></tr>
+<tr><td class="num" id="LN464">464</td><td class="line">			sha1_to_hex(object));</td></tr>
+<tr><td class="num" id="LN465">465</td><td class="line">		remove_note(t, object);</td></tr>
+<tr><td class="num" id="LN466">466</td><td class="line">		commit_notes(t, <span class='string_literal'>"Notes removed by 'git notes add'"</span>);</td></tr>
+<tr><td class="num" id="LN467">467</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN468">468</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN469">469</td><td class="line">	free_note_data(&amp;d);</td></tr>
+<tr><td class="num" id="LN470">470</td><td class="line">	free_notes(t);</td></tr>
+<tr><td class="num" id="LN471">471</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN472">472</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN473">473</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN474">474</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> copy(<span class='keyword'>int</span> argc, <span class='keyword'>const</span> <span class='keyword'>char</span> **argv, <span class='keyword'>const</span> <span class='keyword'>char</span> *prefix)</td></tr>
+<tr><td class="num" id="LN475">475</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN476">476</td><td class="line">	<span class='keyword'>int</span> retval = 0, force = 0, from_stdin = 0;</td></tr>
+<tr><td class="num" id="LN477">477</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> *from_note, *note;</td></tr>
+<tr><td class="num" id="LN478">478</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *object_ref;</td></tr>
+<tr><td class="num" id="LN479">479</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> object[20], from_obj[20];</td></tr>
+<tr><td class="num" id="LN480">480</td><td class="line">	<span class='keyword'>struct</span> notes_tree *t;</td></tr>
+<tr><td class="num" id="LN481">481</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *rewrite_cmd = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN482">482</td><td class="line">	<span class='keyword'>struct</span> option options[] = {</td></tr>
+<tr><td class="num" id="LN483">483</td><td class="line">		<span class='macro'>OPT__FORCE(&amp;force, N_(<span class='string_literal'>"replace existing notes"</span>))<span class='expansion'>{ OPTION_COUNTUP, ('f'), ("force"), ((&amp;force)), ((void*)0<br>), ((("replace existing notes"))), PARSE_OPT_NOARG }</span></span>,</td></tr>
+<tr><td class="num" id="LN484">484</td><td class="line">		<span class='macro'>OPT_BOOL(0, <span class='string_literal'>"stdin"</span>, &amp;from_stdin, N_(<span class='string_literal'>"read objects from stdin"</span>))<span class='expansion'>{ OPTION_SET_INT, (0), ("stdin"), (&amp;from_stdin), ((void*)<br>0), (("read objects from stdin")), PARSE_OPT_NOARG, ((void*)0<br>), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN485">485</td><td class="line">		<span class='macro'>OPT_STRING(0, <span class='string_literal'>"for-rewrite"</span>, &amp;rewrite_cmd, N_(<span class='string_literal'>"command"</span>),<span class='expansion'>{ OPTION_STRING, (0), ("for-rewrite"), (&amp;rewrite_cmd), ((<br>"command")), (("load rewriting config for &lt;command&gt; (implies "<br> "--stdin)")) }</span></span></td></tr>
+<tr><td class="num" id="LN486">486</td><td class="line">			   <span class='macro'>N_(<span class='string_literal'>"load rewriting config for &lt;command&gt; (implies "<span class='expansion'>{ OPTION_STRING, (0), ("for-rewrite"), (&amp;rewrite_cmd), ((<br>"command")), (("load rewriting config for &lt;command&gt; (implies "<br> "--stdin)")) }</span></span></span></td></tr>
+<tr><td class="num" id="LN487">487</td><td class="line">			      <span class='string_literal'><span class='macro'>"--stdin)"</span>))<span class='expansion'>{ OPTION_STRING, (0), ("for-rewrite"), (&amp;rewrite_cmd), ((<br>"command")), (("load rewriting config for &lt;command&gt; (implies "<br> "--stdin)")) }</span></span>,</td></tr>
+<tr><td class="num" id="LN488">488</td><td class="line">		<span class='macro'>OPT_END()<span class='expansion'>{ OPTION_END }</span></span></td></tr>
+<tr><td class="num" id="LN489">489</td><td class="line">	};</td></tr>
+<tr><td class="num" id="LN490">490</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN491">491</td><td class="line">	argc = parse_options(argc, argv, prefix, options, git_notes_copy_usage,</td></tr>
+<tr><td class="num" id="LN492">492</td><td class="line">			     0);</td></tr>
+<tr><td class="num" id="LN493">493</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN494">494</td><td class="line">	<span class='keyword'>if</span> (from_stdin || rewrite_cmd) {</td></tr>
+<tr><td class="num" id="LN495">495</td><td class="line">		<span class='keyword'>if</span> (argc) {</td></tr>
+<tr><td class="num" id="LN496">496</td><td class="line">			<span class='macro'>error(_(<span class='string_literal'>"too many parameters"</span>))<span class='expansion'>(error(_("too many parameters")), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN497">497</td><td class="line">			usage_with_options(git_notes_copy_usage, options);</td></tr>
+<tr><td class="num" id="LN498">498</td><td class="line">		} <span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN499">499</td><td class="line">			<span class='keyword'>return</span> notes_copy_from_stdin(force, rewrite_cmd);</td></tr>
+<tr><td class="num" id="LN500">500</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN501">501</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN502">502</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN503">503</td><td class="line">	<span class='keyword'>if</span> (argc &lt; 2) {</td></tr>
+<tr><td class="num" id="LN504">504</td><td class="line">		<span class='macro'>error(_(<span class='string_literal'>"too few parameters"</span>))<span class='expansion'>(error(_("too few parameters")), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN505">505</td><td class="line">		usage_with_options(git_notes_copy_usage, options);</td></tr>
+<tr><td class="num" id="LN506">506</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN507">507</td><td class="line">	<span class='keyword'>if</span> (2 &lt; argc) {</td></tr>
+<tr><td class="num" id="LN508">508</td><td class="line">		<span class='macro'>error(_(<span class='string_literal'>"too many parameters"</span>))<span class='expansion'>(error(_("too many parameters")), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN509">509</td><td class="line">		usage_with_options(git_notes_copy_usage, options);</td></tr>
+<tr><td class="num" id="LN510">510</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN511">511</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN512">512</td><td class="line">	<span class='keyword'>if</span> (get_sha1(argv[0], from_obj))</td></tr>
+<tr><td class="num" id="LN513">513</td><td class="line">		die(_(<span class='string_literal'>"failed to resolve '%s' as a valid ref."</span>), argv[0]);</td></tr>
+<tr><td class="num" id="LN514">514</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN515">515</td><td class="line">	object_ref = 1 &lt; argc ? argv[1] : <span class='string_literal'>"HEAD"</span>;</td></tr>
+<tr><td class="num" id="LN516">516</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN517">517</td><td class="line">	<span class='keyword'>if</span> (get_sha1(object_ref, object))</td></tr>
+<tr><td class="num" id="LN518">518</td><td class="line">		die(_(<span class='string_literal'>"failed to resolve '%s' as a valid ref."</span>), object_ref);</td></tr>
+<tr><td class="num" id="LN519">519</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN520">520</td><td class="line">	t = init_notes_check(<span class='string_literal'>"copy"</span>, <span class='macro'>NOTES_INIT_WRITABLE<span class='expansion'>2</span></span>);</td></tr>
+<tr><td class="num" id="LN521">521</td><td class="line">	note = get_note(t, object);</td></tr>
+<tr><td class="num" id="LN522">522</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN523">523</td><td class="line">	<span class='keyword'>if</span> (note) {</td></tr>
+<tr><td class="num" id="LN524">524</td><td class="line">		<span class='keyword'>if</span> (!force) {</td></tr>
+<tr><td class="num" id="LN525">525</td><td class="line">			retval = <span class='macro'>error(_(<span class='string_literal'>"Cannot copy notes. Found existing "<span class='expansion'>(error(_("Cannot copy notes. Found existing " "notes for object %s. Use '-f' to "<br> "overwrite existing notes"), sha1_to_hex(object)), const_error<br>())</span></span></span></td></tr>
+<tr><td class="num" id="LN526">526</td><td class="line">				       <span class='string_literal'><span class='macro'>"notes for object %s. Use '-f' to "<span class='expansion'>(error(_("Cannot copy notes. Found existing " "notes for object %s. Use '-f' to "<br> "overwrite existing notes"), sha1_to_hex(object)), const_error<br>())</span></span></span></td></tr>
+<tr><td class="num" id="LN527">527</td><td class="line">				       <span class='string_literal'><span class='macro'>"overwrite existing notes"</span>),<span class='expansion'>(error(_("Cannot copy notes. Found existing " "notes for object %s. Use '-f' to "<br> "overwrite existing notes"), sha1_to_hex(object)), const_error<br>())</span></span></td></tr>
+<tr><td class="num" id="LN528">528</td><td class="line">				       <span class='macro'>sha1_to_hex(object))<span class='expansion'>(error(_("Cannot copy notes. Found existing " "notes for object %s. Use '-f' to "<br> "overwrite existing notes"), sha1_to_hex(object)), const_error<br>())</span></span>;</td></tr>
+<tr><td class="num" id="LN529">529</td><td class="line">			<span class='keyword'>goto</span> out;</td></tr>
+<tr><td class="num" id="LN530">530</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN531">531</td><td class="line">		fprintf(<span class='macro'>stderr<span class='expansion'>__stderrp</span></span>, _(<span class='string_literal'>"Overwriting existing notes for object %s\n"</span>),</td></tr>
+<tr><td class="num" id="LN532">532</td><td class="line">			sha1_to_hex(object));</td></tr>
+<tr><td class="num" id="LN533">533</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN534">534</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN535">535</td><td class="line">	from_note = get_note(t, from_obj);</td></tr>
+<tr><td class="num" id="LN536">536</td><td class="line">	<span class='keyword'>if</span> (!from_note) {</td></tr>
+<tr><td class="num" id="LN537">537</td><td class="line">		retval = <span class='macro'>error(_(<span class='string_literal'>"missing notes on source object %s. Cannot "<span class='expansion'>(error(_("missing notes on source object %s. Cannot " "copy."<br>), sha1_to_hex(from_obj)), const_error())</span></span></span></td></tr>
+<tr><td class="num" id="LN538">538</td><td class="line">			       <span class='string_literal'><span class='macro'>"copy."</span>), sha1_to_hex(from_obj))<span class='expansion'>(error(_("missing notes on source object %s. Cannot " "copy."<br>), sha1_to_hex(from_obj)), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN539">539</td><td class="line">		<span class='keyword'>goto</span> out;</td></tr>
+<tr><td class="num" id="LN540">540</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN541">541</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN542">542</td><td class="line">	<span class='keyword'>if</span> (add_note(t, object, from_note, combine_notes_overwrite))</td></tr>
+<tr><td class="num" id="LN543">543</td><td class="line">		die(<span class='string_literal'>"BUG: combine_notes_overwrite failed"</span>);</td></tr>
+<tr><td class="num" id="LN544">544</td><td class="line">	commit_notes(t, <span class='string_literal'>"Notes added by 'git notes copy'"</span>);</td></tr>
+<tr><td class="num" id="LN545">545</td><td class="line">out:</td></tr>
+<tr><td class="num" id="LN546">546</td><td class="line">	free_notes(t);</td></tr>
+<tr><td class="num" id="LN547">547</td><td class="line">	<span class='keyword'>return</span> retval;</td></tr>
+<tr><td class="num" id="LN548">548</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN549">549</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN550">550</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> append_edit(<span class='keyword'>int</span> argc, <span class='keyword'>const</span> <span class='keyword'>char</span> **argv, <span class='keyword'>const</span> <span class='keyword'>char</span> *prefix)</td></tr>
+<tr><td class="num" id="LN551">551</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN552">552</td><td class="line">	<span class='keyword'>int</span> allow_empty = 0;</td></tr>
+<tr><td class="num" id="LN553">553</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *object_ref;</td></tr>
+<tr><td class="num" id="LN554">554</td><td class="line">	<span class='keyword'>struct</span> notes_tree *t;</td></tr>
+<tr><td class="num" id="LN555">555</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> object[20], new_note[20];</td></tr>
+<tr><td class="num" id="LN556">556</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> *note;</td></tr>
+<tr><td class="num" id="LN557">557</td><td class="line">	<span class='keyword'>char</span> logmsg[100];</td></tr>
+<tr><td class="num" id="LN558">558</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> * <span class='keyword'>const</span> *usage;</td></tr>
+<tr><td class="num" id="LN559">559</td><td class="line">	<span class='keyword'>struct</span> note_data d = { 0, 0, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span> };</td></tr>
+<tr><td class="num" id="LN560">560</td><td class="line">	<span class='keyword'>struct</span> option options[] = {</td></tr>
+<tr><td class="num" id="LN561">561</td><td class="line">		{ OPTION_CALLBACK, 'm', <span class='string_literal'>"message"</span>, &amp;d, <span class='macro'>N_(<span class='string_literal'>"message"</span>)<span class='expansion'>("message")</span></span>,</td></tr>
+<tr><td class="num" id="LN562">562</td><td class="line">			<span class='macro'>N_(<span class='string_literal'>"note contents as a string"</span>)<span class='expansion'>("note contents as a string")</span></span>, PARSE_OPT_NONEG,</td></tr>
+<tr><td class="num" id="LN563">563</td><td class="line">			parse_msg_arg},</td></tr>
+<tr><td class="num" id="LN564">564</td><td class="line">		{ OPTION_CALLBACK, 'F', <span class='string_literal'>"file"</span>, &amp;d, <span class='macro'>N_(<span class='string_literal'>"file"</span>)<span class='expansion'>("file")</span></span>,</td></tr>
+<tr><td class="num" id="LN565">565</td><td class="line">			<span class='macro'>N_(<span class='string_literal'>"note contents in a file"</span>)<span class='expansion'>("note contents in a file")</span></span>, PARSE_OPT_NONEG,</td></tr>
+<tr><td class="num" id="LN566">566</td><td class="line">			parse_file_arg},</td></tr>
+<tr><td class="num" id="LN567">567</td><td class="line">		{ OPTION_CALLBACK, 'c', <span class='string_literal'>"reedit-message"</span>, &amp;d, <span class='macro'>N_(<span class='string_literal'>"object"</span>)<span class='expansion'>("object")</span></span>,</td></tr>
+<tr><td class="num" id="LN568">568</td><td class="line">			<span class='macro'>N_(<span class='string_literal'>"reuse and edit specified note object"</span>)<span class='expansion'>("reuse and edit specified note object")</span></span>, PARSE_OPT_NONEG,</td></tr>
+<tr><td class="num" id="LN569">569</td><td class="line">			parse_reedit_arg},</td></tr>
+<tr><td class="num" id="LN570">570</td><td class="line">		{ OPTION_CALLBACK, 'C', <span class='string_literal'>"reuse-message"</span>, &amp;d, <span class='macro'>N_(<span class='string_literal'>"object"</span>)<span class='expansion'>("object")</span></span>,</td></tr>
+<tr><td class="num" id="LN571">571</td><td class="line">			<span class='macro'>N_(<span class='string_literal'>"reuse specified note object"</span>)<span class='expansion'>("reuse specified note object")</span></span>, PARSE_OPT_NONEG,</td></tr>
+<tr><td class="num" id="LN572">572</td><td class="line">			parse_reuse_arg},</td></tr>
+<tr><td class="num" id="LN573">573</td><td class="line">		<span class='macro'>OPT_BOOL(0, <span class='string_literal'>"allow-empty"</span>, &amp;allow_empty,<span class='expansion'>{ OPTION_SET_INT, (0), ("allow-empty"), (&amp;allow_empty), (<br>(void*)0), (("allow storing empty note")), PARSE_OPT_NOARG, (<br>(void*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN574">574</td><td class="line">			<span class='macro'>N_(<span class='string_literal'>"allow storing empty note"</span>))<span class='expansion'>{ OPTION_SET_INT, (0), ("allow-empty"), (&amp;allow_empty), (<br>(void*)0), (("allow storing empty note")), PARSE_OPT_NOARG, (<br>(void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN575">575</td><td class="line">		<span class='macro'>OPT_END()<span class='expansion'>{ OPTION_END }</span></span></td></tr>
+<tr><td class="num" id="LN576">576</td><td class="line">	};</td></tr>
+<tr><td class="num" id="LN577">577</td><td class="line">	<span class='keyword'>int</span> edit = !strcmp(argv[0], <span class='string_literal'>"edit"</span>);</td></tr>
+<tr><td class="num" id="LN578">578</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN579">579</td><td class="line">	usage = edit ? git_notes_edit_usage : git_notes_append_usage;</td></tr>
+<tr><td class="num" id="LN580">580</td><td class="line">	argc = parse_options(argc, argv, prefix, options, usage,</td></tr>
+<tr><td class="num" id="LN581">581</td><td class="line">			     PARSE_OPT_KEEP_ARGV0);</td></tr>
+<tr><td class="num" id="LN582">582</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN583">583</td><td class="line">	<span class='keyword'>if</span> (2 &lt; argc) {</td></tr>
+<tr><td class="num" id="LN584">584</td><td class="line">		<span class='macro'>error(_(<span class='string_literal'>"too many parameters"</span>))<span class='expansion'>(error(_("too many parameters")), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN585">585</td><td class="line">		usage_with_options(usage, options);</td></tr>
+<tr><td class="num" id="LN586">586</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN587">587</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN588">588</td><td class="line">	<span class='keyword'>if</span> (d.given &amp;&amp; edit)</td></tr>
+<tr><td class="num" id="LN589">589</td><td class="line">		fprintf(<span class='macro'>stderr<span class='expansion'>__stderrp</span></span>, _(<span class='string_literal'>"The -m/-F/-c/-C options have been deprecated "</span></td></tr>
+<tr><td class="num" id="LN590">590</td><td class="line">			<span class='string_literal'>"for the 'edit' subcommand.\n"</span></td></tr>
+<tr><td class="num" id="LN591">591</td><td class="line">			<span class='string_literal'>"Please use 'git notes add -f -m/-F/-c/-C' instead.\n"</span>));</td></tr>
+<tr><td class="num" id="LN592">592</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN593">593</td><td class="line">	object_ref = 1 &lt; argc ? argv[1] : <span class='string_literal'>"HEAD"</span>;</td></tr>
+<tr><td class="num" id="LN594">594</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN595">595</td><td class="line">	<span class='keyword'>if</span> (get_sha1(object_ref, object))</td></tr>
+<tr><td class="num" id="LN596">596</td><td class="line">		die(_(<span class='string_literal'>"failed to resolve '%s' as a valid ref."</span>), object_ref);</td></tr>
+<tr><td class="num" id="LN597">597</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN598">598</td><td class="line">	t = init_notes_check(argv[0], <span class='macro'>NOTES_INIT_WRITABLE<span class='expansion'>2</span></span>);</td></tr>
+<tr><td class="num" id="LN599">599</td><td class="line">	note = get_note(t, object);</td></tr>
+<tr><td class="num" id="LN600">600</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN601">601</td><td class="line">	prepare_note_data(object, &amp;d, edit ? note : <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>);</td></tr>
+<tr><td class="num" id="LN602">602</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN603">603</td><td class="line">	<span class='keyword'>if</span> (note &amp;&amp; !edit) {</td></tr>
+<tr><td class="num" id="LN604">604</td><td class="line">		<span class='comment'>/* Append buf to previous note contents */</span></td></tr>
+<tr><td class="num" id="LN605">605</td><td class="line">		<span class='keyword'>unsigned</span> <span class='keyword'>long</span> size;</td></tr>
+<tr><td class="num" id="LN606">606</td><td class="line">		<span class='keyword'>enum</span> object_type type;</td></tr>
+<tr><td class="num" id="LN607">607</td><td class="line">		<span class='keyword'>char</span> *prev_buf = read_sha1_file(note, &amp;type, &amp;size);</td></tr>
+<tr><td class="num" id="LN608">608</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN609">609</td><td class="line">		strbuf_grow(&amp;d.buf, size + 1);</td></tr>
+<tr><td class="num" id="LN610">610</td><td class="line">		<span class='keyword'>if</span> (d.buf.len &amp;&amp; prev_buf &amp;&amp; size)</td></tr>
+<tr><td class="num" id="LN611">611</td><td class="line">			strbuf_insert(&amp;d.buf, 0, <span class='string_literal'>"\n"</span>, 1);</td></tr>
+<tr><td class="num" id="LN612">612</td><td class="line">		<span class='keyword'>if</span> (prev_buf &amp;&amp; size)</td></tr>
+<tr><td class="num" id="LN613">613</td><td class="line">			strbuf_insert(&amp;d.buf, 0, prev_buf, size);</td></tr>
+<tr><td class="num" id="LN614">614</td><td class="line">		free(prev_buf);</td></tr>
+<tr><td class="num" id="LN615">615</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN616">616</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN617">617</td><td class="line">	<span class='keyword'>if</span> (d.buf.len || allow_empty) {</td></tr>
+<tr><td class="num" id="LN618">618</td><td class="line">		write_note_data(&amp;d, new_note);</td></tr>
+<tr><td class="num" id="LN619">619</td><td class="line">		<span class='keyword'>if</span> (add_note(t, object, new_note, combine_notes_overwrite))</td></tr>
+<tr><td class="num" id="LN620">620</td><td class="line">			die(<span class='string_literal'>"BUG: combine_notes_overwrite failed"</span>);</td></tr>
+<tr><td class="num" id="LN621">621</td><td class="line">		<span class='macro'>snprintf(logmsg, <span class='keyword'>sizeof</span>(logmsg), <span class='string_literal'>"Notes added by 'git notes %s'"</span>,<span class='expansion'>__builtin___snprintf_chk (logmsg, sizeof(logmsg), 0, __builtin_object_size<br> (logmsg, 2 &gt; 1 ? 1 : 0), "Notes added by 'git notes %s'",<br> argv[0])</span></span></td></tr>
+<tr><td class="num" id="LN622">622</td><td class="line">			<span class='macro'>argv[0])<span class='expansion'>__builtin___snprintf_chk (logmsg, sizeof(logmsg), 0, __builtin_object_size<br> (logmsg, 2 &gt; 1 ? 1 : 0), "Notes added by 'git notes %s'",<br> argv[0])</span></span>;</td></tr>
+<tr><td class="num" id="LN623">623</td><td class="line">	} <span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN624">624</td><td class="line">		fprintf(<span class='macro'>stderr<span class='expansion'>__stderrp</span></span>, _(<span class='string_literal'>"Removing note for object %s\n"</span>),</td></tr>
+<tr><td class="num" id="LN625">625</td><td class="line">			sha1_to_hex(object));</td></tr>
+<tr><td class="num" id="LN626">626</td><td class="line">		remove_note(t, object);</td></tr>
+<tr><td class="num" id="LN627">627</td><td class="line">		<span class='macro'>snprintf(logmsg, <span class='keyword'>sizeof</span>(logmsg), <span class='string_literal'>"Notes removed by 'git notes %s'"</span>,<span class='expansion'>__builtin___snprintf_chk (logmsg, sizeof(logmsg), 0, __builtin_object_size<br> (logmsg, 2 &gt; 1 ? 1 : 0), "Notes removed by 'git notes %s'"<br>, argv[0])</span></span></td></tr>
+<tr><td class="num" id="LN628">628</td><td class="line">			<span class='macro'>argv[0])<span class='expansion'>__builtin___snprintf_chk (logmsg, sizeof(logmsg), 0, __builtin_object_size<br> (logmsg, 2 &gt; 1 ? 1 : 0), "Notes removed by 'git notes %s'"<br>, argv[0])</span></span>;</td></tr>
+<tr><td class="num" id="LN629">629</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN630">630</td><td class="line">	commit_notes(t, logmsg);</td></tr>
+<tr><td class="num" id="LN631">631</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN632">632</td><td class="line">	free_note_data(&amp;d);</td></tr>
+<tr><td class="num" id="LN633">633</td><td class="line">	free_notes(t);</td></tr>
+<tr><td class="num" id="LN634">634</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN635">635</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN636">636</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN637">637</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> show(<span class='keyword'>int</span> argc, <span class='keyword'>const</span> <span class='keyword'>char</span> **argv, <span class='keyword'>const</span> <span class='keyword'>char</span> *prefix)</td></tr>
+<tr><td class="num" id="LN638">638</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN639">639</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *object_ref;</td></tr>
+<tr><td class="num" id="LN640">640</td><td class="line">	<span class='keyword'>struct</span> notes_tree *t;</td></tr>
+<tr><td class="num" id="LN641">641</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> object[20];</td></tr>
+<tr><td class="num" id="LN642">642</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>unsigned</span> <span class='keyword'>char</span> *note;</td></tr>
+<tr><td class="num" id="LN643">643</td><td class="line">	<span class='keyword'>int</span> retval;</td></tr>
+<tr><td class="num" id="LN644">644</td><td class="line">	<span class='keyword'>struct</span> option options[] = {</td></tr>
+<tr><td class="num" id="LN645">645</td><td class="line">		<span class='macro'>OPT_END()<span class='expansion'>{ OPTION_END }</span></span></td></tr>
+<tr><td class="num" id="LN646">646</td><td class="line">	};</td></tr>
+<tr><td class="num" id="LN647">647</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN648">648</td><td class="line">	argc = parse_options(argc, argv, prefix, options, git_notes_show_usage,</td></tr>
+<tr><td class="num" id="LN649">649</td><td class="line">			     0);</td></tr>
+<tr><td class="num" id="LN650">650</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN651">651</td><td class="line">	<span class='keyword'>if</span> (1 &lt; argc) {</td></tr>
+<tr><td class="num" id="LN652">652</td><td class="line">		<span class='macro'>error(_(<span class='string_literal'>"too many parameters"</span>))<span class='expansion'>(error(_("too many parameters")), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN653">653</td><td class="line">		usage_with_options(git_notes_show_usage, options);</td></tr>
+<tr><td class="num" id="LN654">654</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN655">655</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN656">656</td><td class="line">	object_ref = argc ? argv[0] : <span class='string_literal'>"HEAD"</span>;</td></tr>
+<tr><td class="num" id="LN657">657</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN658">658</td><td class="line">	<span class='keyword'>if</span> (get_sha1(object_ref, object))</td></tr>
+<tr><td class="num" id="LN659">659</td><td class="line">		die(_(<span class='string_literal'>"failed to resolve '%s' as a valid ref."</span>), object_ref);</td></tr>
+<tr><td class="num" id="LN660">660</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN661">661</td><td class="line">	t = init_notes_check(<span class='string_literal'>"show"</span>, 0);</td></tr>
+<tr><td class="num" id="LN662">662</td><td class="line">	note = get_note(t, object);</td></tr>
+<tr><td class="num" id="LN663">663</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN664">664</td><td class="line">	<span class='keyword'>if</span> (!note)</td></tr>
+<tr><td class="num" id="LN665">665</td><td class="line">		retval = <span class='macro'>error(_(<span class='string_literal'>"no note found for object %s."</span>),<span class='expansion'>(error(_("no note found for object %s."), sha1_to_hex(object)<br>), const_error())</span></span></td></tr>
+<tr><td class="num" id="LN666">666</td><td class="line">			       <span class='macro'>sha1_to_hex(object))<span class='expansion'>(error(_("no note found for object %s."), sha1_to_hex(object)<br>), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN667">667</td><td class="line">	<span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN668">668</td><td class="line">		<span class='keyword'>const</span> <span class='keyword'>char</span> *show_args[3] = {<span class='string_literal'>"show"</span>, sha1_to_hex(note), <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>};</td></tr>
+<tr><td class="num" id="LN669">669</td><td class="line">		retval = execv_git_cmd(show_args);</td></tr>
+<tr><td class="num" id="LN670">670</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN671">671</td><td class="line">	free_notes(t);</td></tr>
+<tr><td class="num" id="LN672">672</td><td class="line">	<span class='keyword'>return</span> retval;</td></tr>
+<tr><td class="num" id="LN673">673</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN674">674</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN675">675</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> merge_abort(<span class='keyword'>struct</span> notes_merge_options *o)</td></tr>
+<tr><td class="num" id="LN676">676</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN677">677</td><td class="line">	<span class='keyword'>int</span> ret = 0;</td></tr>
+<tr><td class="num" id="LN678">678</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN679">679</td><td class="line">	<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN680">680</td><td class="line">	 <span class='comment'>* Remove .git/NOTES_MERGE_PARTIAL and .git/NOTES_MERGE_REF, and call</span></td></tr>
+<tr><td class="num" id="LN681">681</td><td class="line">	 <span class='comment'>* notes_merge_abort() to remove .git/NOTES_MERGE_WORKTREE.</span></td></tr>
+<tr><td class="num" id="LN682">682</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN683">683</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN684">684</td><td class="line">	<span class='keyword'>if</span> (delete_ref(<span class='string_literal'>"NOTES_MERGE_PARTIAL"</span>, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, 0))</td></tr>
+<tr><td class="num" id="LN685">685</td><td class="line">		ret += <span class='macro'>error(_(<span class='string_literal'>"failed to delete ref NOTES_MERGE_PARTIAL"</span>))<span class='expansion'>(error(_("failed to delete ref NOTES_MERGE_PARTIAL")), const_error<br>())</span></span>;</td></tr>
+<tr><td class="num" id="LN686">686</td><td class="line">	<span class='keyword'>if</span> (delete_ref(<span class='string_literal'>"NOTES_MERGE_REF"</span>, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, <span class='macro'>REF_NODEREF<span class='expansion'>0x01</span></span>))</td></tr>
+<tr><td class="num" id="LN687">687</td><td class="line">		ret += <span class='macro'>error(_(<span class='string_literal'>"failed to delete ref NOTES_MERGE_REF"</span>))<span class='expansion'>(error(_("failed to delete ref NOTES_MERGE_REF")), const_error<br>())</span></span>;</td></tr>
+<tr><td class="num" id="LN688">688</td><td class="line">	<span class='keyword'>if</span> (notes_merge_abort(o))</td></tr>
+<tr><td class="num" id="LN689">689</td><td class="line">		ret += <span class='macro'>error(_(<span class='string_literal'>"failed to remove 'git notes merge' worktree"</span>))<span class='expansion'>(error(_("failed to remove 'git notes merge' worktree")), const_error<br>())</span></span>;</td></tr>
+<tr><td class="num" id="LN690">690</td><td class="line">	<span class='keyword'>return</span> ret;</td></tr>
+<tr><td class="num" id="LN691">691</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN692">692</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN693">693</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> merge_commit(<span class='keyword'>struct</span> notes_merge_options *o)</td></tr>
+<tr><td class="num" id="LN694">694</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN695">695</td><td class="line">	<span class='keyword'>struct</span> strbuf msg = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN696">696</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> sha1[20], parent_sha1[20];</td></tr>
+<tr><td class="num" id="LN697">697</td><td class="line">	<span class='keyword'>struct</span> notes_tree *t;</td></tr>
+<tr><td class="num" id="LN698">698</td><td class="line">	<span class='keyword'>struct</span> commit *partial;</td></tr>
+<tr><td class="num" id="LN699">699</td><td class="line">	<span class='keyword'>struct</span> pretty_print_context pretty_ctx;</td></tr>
+<tr><td class="num" id="LN700">700</td><td class="line">	<span class='keyword'>void</span> *local_ref_to_free;</td></tr>
+<tr><td class="num" id="LN701">701</td><td class="line">	<span class='keyword'>int</span> ret;</td></tr>
+<tr><td class="num" id="LN702">702</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN703">703</td><td class="line">	<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN704">704</td><td class="line">	 <span class='comment'>* Read partial merge result from .git/NOTES_MERGE_PARTIAL,</span></td></tr>
+<tr><td class="num" id="LN705">705</td><td class="line">	 <span class='comment'>* and target notes ref from .git/NOTES_MERGE_REF.</span></td></tr>
+<tr><td class="num" id="LN706">706</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN707">707</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN708">708</td><td class="line">	<span class='keyword'>if</span> (get_sha1(<span class='string_literal'>"NOTES_MERGE_PARTIAL"</span>, sha1))</td></tr>
+<tr><td class="num" id="LN709">709</td><td class="line">		die(_(<span class='string_literal'>"failed to read ref NOTES_MERGE_PARTIAL"</span>));</td></tr>
+<tr><td class="num" id="LN710">710</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (!(partial = lookup_commit_reference(sha1)))</td></tr>
+<tr><td class="num" id="LN711">711</td><td class="line">		die(_(<span class='string_literal'>"could not find commit from NOTES_MERGE_PARTIAL."</span>));</td></tr>
+<tr><td class="num" id="LN712">712</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (parse_commit(partial))</td></tr>
+<tr><td class="num" id="LN713">713</td><td class="line">		die(_(<span class='string_literal'>"could not parse commit from NOTES_MERGE_PARTIAL."</span>));</td></tr>
+<tr><td class="num" id="LN714">714</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN715">715</td><td class="line">	<span class='keyword'>if</span> (partial-&gt;parents)</td></tr>
+<tr><td class="num" id="LN716">716</td><td class="line">		hashcpy(parent_sha1, partial-&gt;parents-&gt;item-&gt;object.oid.hash);</td></tr>
+<tr><td class="num" id="LN717">717</td><td class="line">	<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN718">718</td><td class="line">		hashclr(parent_sha1);</td></tr>
+<tr><td class="num" id="LN719">719</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN720">720</td><td class="line">	t = xcalloc(1, <span class='keyword'>sizeof</span>(<span class='keyword'>struct</span> notes_tree));</td></tr>
+<tr><td class="num" id="LN721">721</td><td class="line">	init_notes(t, <span class='string_literal'>"NOTES_MERGE_PARTIAL"</span>, combine_notes_overwrite, 0);</td></tr>
+<tr><td class="num" id="LN722">722</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN723">723</td><td class="line">	o-&gt;local_ref = local_ref_to_free =</td></tr>
+<tr><td class="num" id="LN724">724</td><td class="line">		resolve_refdup(<span class='string_literal'>"NOTES_MERGE_REF"</span>, 0, sha1, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>);</td></tr>
+<tr><td class="num" id="LN725">725</td><td class="line">	<span class='keyword'>if</span> (!o-&gt;local_ref)</td></tr>
+<tr><td class="num" id="LN726">726</td><td class="line">		die(_(<span class='string_literal'>"failed to resolve NOTES_MERGE_REF"</span>));</td></tr>
+<tr><td class="num" id="LN727">727</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN728">728</td><td class="line">	<span class='keyword'>if</span> (notes_merge_commit(o, t, partial, sha1))</td></tr>
+<tr><td class="num" id="LN729">729</td><td class="line">		die(_(<span class='string_literal'>"failed to finalize notes merge"</span>));</td></tr>
+<tr><td class="num" id="LN730">730</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN731">731</td><td class="line">	<span class='comment'>/* Reuse existing commit message in reflog message */</span></td></tr>
+<tr><td class="num" id="LN732">732</td><td class="line">	<span class='macro'>memset(&amp;pretty_ctx, 0, <span class='keyword'>sizeof</span>(pretty_ctx))<span class='expansion'>__builtin___memset_chk (&amp;pretty_ctx, 0, sizeof(pretty_ctx<br>), __builtin_object_size (&amp;pretty_ctx, 0))</span></span>;</td></tr>
+<tr><td class="num" id="LN733">733</td><td class="line">	format_commit_message(partial, <span class='string_literal'>"%s"</span>, &amp;msg, &amp;pretty_ctx);</td></tr>
+<tr><td class="num" id="LN734">734</td><td class="line">	strbuf_trim(&amp;msg);</td></tr>
+<tr><td class="num" id="LN735">735</td><td class="line">	strbuf_insert(&amp;msg, 0, <span class='string_literal'>"notes: "</span>, 7);</td></tr>
+<tr><td class="num" id="LN736">736</td><td class="line">	update_ref(msg.buf, o-&gt;local_ref, sha1,</td></tr>
+<tr><td class="num" id="LN737">737</td><td class="line">		   is_null_sha1(parent_sha1) ? <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span> : parent_sha1,</td></tr>
+<tr><td class="num" id="LN738">738</td><td class="line">		   0, UPDATE_REFS_DIE_ON_ERR);</td></tr>
+<tr><td class="num" id="LN739">739</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN740">740</td><td class="line">	free_notes(t);</td></tr>
+<tr><td class="num" id="LN741">741</td><td class="line">	strbuf_release(&amp;msg);</td></tr>
+<tr><td class="num" id="LN742">742</td><td class="line">	ret = merge_abort(o);</td></tr>
+<tr><td class="num" id="LN743">743</td><td class="line">	free(local_ref_to_free);</td></tr>
+<tr><td class="num" id="LN744">744</td><td class="line">	<span class='keyword'>return</span> ret;</td></tr>
+<tr><td class="num" id="LN745">745</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN746">746</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN747">747</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> git_config_get_notes_strategy(<span class='keyword'>const</span> <span class='keyword'>char</span> *key,</td></tr>
+<tr><td class="num" id="LN748">748</td><td class="line">					 <span class='keyword'>enum</span> notes_merge_strategy *strategy)</td></tr>
+<tr><td class="num" id="LN749">749</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN750">750</td><td class="line">	<span class='keyword'>char</span> *value;</td></tr>
+<tr><td class="num" id="LN751">751</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN752">752</td><td class="line">	<span class='keyword'>if</span> (git_config_get_string(key, &amp;value))</td></tr>
+<tr><td class="num" id="LN753">753</td><td class="line">		<span class='keyword'>return</span> 1;</td></tr>
+<tr><td class="num" id="LN754">754</td><td class="line">	<span class='keyword'>if</span> (parse_notes_merge_strategy(value, strategy))</td></tr>
+<tr><td class="num" id="LN755">755</td><td class="line">		git_die_config(key, _(<span class='string_literal'>"unknown notes merge strategy %s"</span>), value);</td></tr>
+<tr><td class="num" id="LN756">756</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN757">757</td><td class="line">	free(value);</td></tr>
+<tr><td class="num" id="LN758">758</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN759">759</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN760">760</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN761">761</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> merge(<span class='keyword'>int</span> argc, <span class='keyword'>const</span> <span class='keyword'>char</span> **argv, <span class='keyword'>const</span> <span class='keyword'>char</span> *prefix)</td></tr>
+<tr><td class="num" id="LN762">762</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN763">763</td><td class="line">	<span class='keyword'>struct</span> strbuf remote_ref = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>, msg = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN764">764</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> result_sha1[20];</td></tr>
+<tr><td class="num" id="LN765">765</td><td class="line">	<span class='keyword'>struct</span> notes_tree *t;</td></tr>
+<tr><td class="num" id="LN766">766</td><td class="line">	<span class='keyword'>struct</span> notes_merge_options o;</td></tr>
+<tr><td class="num" id="LN767">767</td><td class="line">	<span class='keyword'>int</span> do_merge = 0, do_commit = 0, do_abort = 0;</td></tr>
+<tr><td class="num" id="LN768">768</td><td class="line">	<span class='keyword'>int</span> verbosity = 0, result;</td></tr>
+<tr><td class="num" id="LN769">769</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *strategy = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN770">770</td><td class="line">	<span class='keyword'>struct</span> option options[] = {</td></tr>
+<tr><td class="num" id="LN771">771</td><td class="line">		<span class='macro'>OPT_GROUP(N_(<span class='string_literal'>"General options"</span>))<span class='expansion'>{ OPTION_GROUP, 0, ((void*)0), ((void*)0), ((void*)0), (("General options"<br>)) }</span></span>,</td></tr>
+<tr><td class="num" id="LN772">772</td><td class="line">		<span class='macro'>OPT__VERBOSITY(&amp;verbosity)<span class='expansion'>{ OPTION_CALLBACK, 'v', "verbose", (&amp;verbosity), ((void*)<br>0), ("be more verbose"), PARSE_OPT_NOARG, &amp;parse_opt_verbosity_cb<br>, 0 }, { OPTION_CALLBACK, 'q', "quiet", (&amp;verbosity), ((void<br>*)0), ("be more quiet"), PARSE_OPT_NOARG, &amp;parse_opt_verbosity_cb<br>, 0 }</span></span>,</td></tr>
+<tr><td class="num" id="LN773">773</td><td class="line">		<span class='macro'>OPT_GROUP(N_(<span class='string_literal'>"Merge options"</span>))<span class='expansion'>{ OPTION_GROUP, 0, ((void*)0), ((void*)0), ((void*)0), (("Merge options"<br>)) }</span></span>,</td></tr>
+<tr><td class="num" id="LN774">774</td><td class="line">		<span class='macro'>OPT_STRING('s', <span class='string_literal'>"strategy"</span>, &amp;strategy, N_(<span class='string_literal'>"strategy"</span>),<span class='expansion'>{ OPTION_STRING, ('s'), ("strategy"), (&amp;strategy), (("strategy"<br>)), (("resolve notes conflicts using the given strategy " "(manual/ours/theirs/union/cat_sort_uniq)"<br>)) }</span></span></td></tr>
+<tr><td class="num" id="LN775">775</td><td class="line">			   <span class='macro'>N_(<span class='string_literal'>"resolve notes conflicts using the given strategy "<span class='expansion'>{ OPTION_STRING, ('s'), ("strategy"), (&amp;strategy), (("strategy"<br>)), (("resolve notes conflicts using the given strategy " "(manual/ours/theirs/union/cat_sort_uniq)"<br>)) }</span></span></span></td></tr>
+<tr><td class="num" id="LN776">776</td><td class="line">			      <span class='string_literal'><span class='macro'>"(manual/ours/theirs/union/cat_sort_uniq)"</span>))<span class='expansion'>{ OPTION_STRING, ('s'), ("strategy"), (&amp;strategy), (("strategy"<br>)), (("resolve notes conflicts using the given strategy " "(manual/ours/theirs/union/cat_sort_uniq)"<br>)) }</span></span>,</td></tr>
+<tr><td class="num" id="LN777">777</td><td class="line">		<span class='macro'>OPT_GROUP(N_(<span class='string_literal'>"Committing unmerged notes"</span>))<span class='expansion'>{ OPTION_GROUP, 0, ((void*)0), ((void*)0), ((void*)0), (("Committing unmerged notes"<br>)) }</span></span>,</td></tr>
+<tr><td class="num" id="LN778">778</td><td class="line">		{ OPTION_SET_INT, 0, <span class='string_literal'>"commit"</span>, &amp;do_commit, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>,</td></tr>
+<tr><td class="num" id="LN779">779</td><td class="line">			<span class='macro'>N_(<span class='string_literal'>"finalize notes merge by committing unmerged notes"</span>)<span class='expansion'>("finalize notes merge by committing unmerged notes")</span></span>,</td></tr>
+<tr><td class="num" id="LN780">780</td><td class="line">			PARSE_OPT_NOARG | PARSE_OPT_NONEG, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, 1},</td></tr>
+<tr><td class="num" id="LN781">781</td><td class="line">		<span class='macro'>OPT_GROUP(N_(<span class='string_literal'>"Aborting notes merge resolution"</span>))<span class='expansion'>{ OPTION_GROUP, 0, ((void*)0), ((void*)0), ((void*)0), (("Aborting notes merge resolution"<br>)) }</span></span>,</td></tr>
+<tr><td class="num" id="LN782">782</td><td class="line">		{ OPTION_SET_INT, 0, <span class='string_literal'>"abort"</span>, &amp;do_abort, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>,</td></tr>
+<tr><td class="num" id="LN783">783</td><td class="line">			<span class='macro'>N_(<span class='string_literal'>"abort notes merge"</span>)<span class='expansion'>("abort notes merge")</span></span>,</td></tr>
+<tr><td class="num" id="LN784">784</td><td class="line">			PARSE_OPT_NOARG | PARSE_OPT_NONEG, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, 1},</td></tr>
+<tr><td class="num" id="LN785">785</td><td class="line">		<span class='macro'>OPT_END()<span class='expansion'>{ OPTION_END }</span></span></td></tr>
+<tr><td class="num" id="LN786">786</td><td class="line">	};</td></tr>
+<tr><td class="num" id="LN787">787</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN788">788</td><td class="line">	argc = parse_options(argc, argv, prefix, options,</td></tr>
+<tr><td class="num" id="LN789">789</td><td class="line">			     git_notes_merge_usage, 0);</td></tr>
+<tr><td class="num" id="LN790">790</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN791">791</td><td class="line">	<span class='keyword'>if</span> (strategy || do_commit + do_abort == 0)</td></tr>
+<tr><td class="num" id="LN792">792</td><td class="line">		do_merge = 1;</td></tr>
+<tr><td class="num" id="LN793">793</td><td class="line">	<span class='keyword'>if</span> (do_merge + do_commit + do_abort != 1) {</td></tr>
+<tr><td class="num" id="LN794">794</td><td class="line">		<span class='macro'>error(_(<span class='string_literal'>"cannot mix --commit, --abort or -s/--strategy"</span>))<span class='expansion'>(error(_("cannot mix --commit, --abort or -s/--strategy")), const_error<br>())</span></span>;</td></tr>
+<tr><td class="num" id="LN795">795</td><td class="line">		usage_with_options(git_notes_merge_usage, options);</td></tr>
+<tr><td class="num" id="LN796">796</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN797">797</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN798">798</td><td class="line">	<span class='keyword'>if</span> (do_merge &amp;&amp; argc != 1) {</td></tr>
+<tr><td class="num" id="LN799">799</td><td class="line">		<span class='macro'>error(_(<span class='string_literal'>"must specify a notes ref to merge"</span>))<span class='expansion'>(error(_("must specify a notes ref to merge")), const_error()<br>)</span></span>;</td></tr>
+<tr><td class="num" id="LN800">800</td><td class="line">		usage_with_options(git_notes_merge_usage, options);</td></tr>
+<tr><td class="num" id="LN801">801</td><td class="line">	} <span class='keyword'>else</span> <span class='keyword'>if</span> (!do_merge &amp;&amp; argc) {</td></tr>
+<tr><td class="num" id="LN802">802</td><td class="line">		<span class='macro'>error(_(<span class='string_literal'>"too many parameters"</span>))<span class='expansion'>(error(_("too many parameters")), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN803">803</td><td class="line">		usage_with_options(git_notes_merge_usage, options);</td></tr>
+<tr><td class="num" id="LN804">804</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN805">805</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN806">806</td><td class="line">	init_notes_merge_options(&amp;o);</td></tr>
+<tr><td class="num" id="LN807">807</td><td class="line">	o.verbosity = verbosity + NOTES_MERGE_VERBOSITY_DEFAULT;</td></tr>
+<tr><td class="num" id="LN808">808</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN809">809</td><td class="line">	<span class='keyword'>if</span> (do_abort)</td></tr>
+<tr><td class="num" id="LN810">810</td><td class="line">		<span class='keyword'>return</span> merge_abort(&amp;o);</td></tr>
+<tr><td class="num" id="LN811">811</td><td class="line">	<span class='keyword'>if</span> (do_commit)</td></tr>
+<tr><td class="num" id="LN812">812</td><td class="line">		<span class='keyword'>return</span> merge_commit(&amp;o);</td></tr>
+<tr><td class="num" id="LN813">813</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN814">814</td><td class="line">	o.local_ref = default_notes_ref();</td></tr>
+<tr><td class="num" id="LN815">815</td><td class="line">	strbuf_addstr(&amp;remote_ref, argv[0]);</td></tr>
+<tr><td class="num" id="LN816">816</td><td class="line">	expand_loose_notes_ref(&amp;remote_ref);</td></tr>
+<tr><td class="num" id="LN817">817</td><td class="line">	o.remote_ref = remote_ref.buf;</td></tr>
+<tr><td class="num" id="LN818">818</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN819">819</td><td class="line">	t = init_notes_check(<span class='string_literal'>"merge"</span>, <span class='macro'>NOTES_INIT_WRITABLE<span class='expansion'>2</span></span>);</td></tr>
+<tr><td class="num" id="LN820">820</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN821">821</td><td class="line">	<span class='keyword'>if</span> (strategy) {</td></tr>
+<tr><td class="num" id="LN822">822</td><td class="line">		<span class='keyword'>if</span> (parse_notes_merge_strategy(strategy, &amp;o.strategy)) {</td></tr>
+<tr><td class="num" id="LN823">823</td><td class="line">			<span class='macro'>error(_(<span class='string_literal'>"unknown -s/--strategy: %s"</span>), strategy)<span class='expansion'>(error(_("unknown -s/--strategy: %s"), strategy), const_error<br>())</span></span>;</td></tr>
+<tr><td class="num" id="LN824">824</td><td class="line">			usage_with_options(git_notes_merge_usage, options);</td></tr>
+<tr><td class="num" id="LN825">825</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN826">826</td><td class="line">	} <span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN827">827</td><td class="line">		<span class='keyword'>struct</span> strbuf merge_key = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN828">828</td><td class="line">		<span class='keyword'>const</span> <span class='keyword'>char</span> *short_ref = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN829">829</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN830">830</td><td class="line">		<span class='keyword'>if</span> (!skip_prefix(o.local_ref, <span class='string_literal'>"refs/notes/"</span>, &amp;short_ref))</td></tr>
+<tr><td class="num" id="LN831">831</td><td class="line">			die(<span class='string_literal'>"BUG: local ref %s is outside of refs/notes/"</span>,</td></tr>
+<tr><td class="num" id="LN832">832</td><td class="line">			    o.local_ref);</td></tr>
+<tr><td class="num" id="LN833">833</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN834">834</td><td class="line">		strbuf_addf(&amp;merge_key, <span class='string_literal'>"notes.%s.mergeStrategy"</span>, short_ref);</td></tr>
+<tr><td class="num" id="LN835">835</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN836">836</td><td class="line">		<span class='keyword'>if</span> (git_config_get_notes_strategy(merge_key.buf, &amp;o.strategy))</td></tr>
+<tr><td class="num" id="LN837">837</td><td class="line">			git_config_get_notes_strategy(<span class='string_literal'>"notes.mergeStrategy"</span>, &amp;o.strategy);</td></tr>
+<tr><td class="num" id="LN838">838</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN839">839</td><td class="line">		strbuf_release(&amp;merge_key);</td></tr>
+<tr><td class="num" id="LN840">840</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN841">841</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN842">842</td><td class="line">	strbuf_addf(&amp;msg, <span class='string_literal'>"notes: Merged notes from %s into %s"</span>,</td></tr>
+<tr><td class="num" id="LN843">843</td><td class="line">		    remote_ref.buf, default_notes_ref());</td></tr>
+<tr><td class="num" id="LN844">844</td><td class="line">	strbuf_add(&amp;(o.commit_msg), msg.buf + 7, msg.len - 7); <span class='comment'>/* skip "notes: " */</span></td></tr>
+<tr><td class="num" id="LN845">845</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN846">846</td><td class="line">	result = notes_merge(&amp;o, t, result_sha1);</td></tr>
+<tr><td class="num" id="LN847">847</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN848">848</td><td class="line">	<span class='keyword'>if</span> (result &gt;= 0) <span class='comment'>/* Merge resulted (trivially) in result_sha1 */</span></td></tr>
+<tr><td class="num" id="LN849">849</td><td class="line">		<span class='comment'>/* Update default notes ref with new commit */</span></td></tr>
+<tr><td class="num" id="LN850">850</td><td class="line">		update_ref(msg.buf, default_notes_ref(), result_sha1, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>,</td></tr>
+<tr><td class="num" id="LN851">851</td><td class="line">			   0, UPDATE_REFS_DIE_ON_ERR);</td></tr>
+<tr><td class="num" id="LN852">852</td><td class="line">	<span class='keyword'>else</span> { <span class='comment'>/* Merge has unresolved conflicts */</span></td></tr>
+<tr><td class="num" id="LN853">853</td><td class="line">		<span class='keyword'>const</span> <span class='keyword'>struct</span> worktree *wt;</td></tr>
+<tr><td class="num" id="LN854">854</td><td class="line">		<span class='comment'>/* Update .git/NOTES_MERGE_PARTIAL with partial merge result */</span></td></tr>
+<tr><td class="num" id="LN855">855</td><td class="line">		update_ref(msg.buf, <span class='string_literal'>"NOTES_MERGE_PARTIAL"</span>, result_sha1, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>,</td></tr>
+<tr><td class="num" id="LN856">856</td><td class="line">			   0, UPDATE_REFS_DIE_ON_ERR);</td></tr>
+<tr><td class="num" id="LN857">857</td><td class="line">		<span class='comment'>/* Store ref-to-be-updated into .git/NOTES_MERGE_REF */</span></td></tr>
+<tr><td class="num" id="LN858">858</td><td class="line">		wt = find_shared_symref(<span class='string_literal'>"NOTES_MERGE_REF"</span>, default_notes_ref());</td></tr>
+<tr><td class="num" id="LN859">859</td><td class="line">		<span class='keyword'>if</span> (wt)</td></tr>
+<tr><td class="num" id="LN860">860</td><td class="line">			die(_(<span class='string_literal'>"a notes merge into %s is already in-progress at %s"</span>),</td></tr>
+<tr><td class="num" id="LN861">861</td><td class="line">			    default_notes_ref(), wt-&gt;path);</td></tr>
+<tr><td class="num" id="LN862">862</td><td class="line">		<span class='keyword'>if</span> (create_symref(<span class='string_literal'>"NOTES_MERGE_REF"</span>, default_notes_ref(), <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>))</td></tr>
+<tr><td class="num" id="LN863">863</td><td class="line">			die(_(<span class='string_literal'>"failed to store link to current notes ref (%s)"</span>),</td></tr>
+<tr><td class="num" id="LN864">864</td><td class="line">			    default_notes_ref());</td></tr>
+<tr><td class="num" id="LN865">865</td><td class="line">		printf(_(<span class='string_literal'>"Automatic notes merge failed. Fix conflicts in %s and "</span></td></tr>
+<tr><td class="num" id="LN866">866</td><td class="line">			 <span class='string_literal'>"commit the result with 'git notes merge --commit', or "</span></td></tr>
+<tr><td class="num" id="LN867">867</td><td class="line">			 <span class='string_literal'>"abort the merge with 'git notes merge --abort'.\n"</span>),</td></tr>
+<tr><td class="num" id="LN868">868</td><td class="line">		       git_path(<span class='macro'>NOTES_MERGE_WORKTREE<span class='expansion'>"NOTES_MERGE_WORKTREE"</span></span>));</td></tr>
+<tr><td class="num" id="LN869">869</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN870">870</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN871">871</td><td class="line">	free_notes(t);</td></tr>
+<tr><td class="num" id="LN872">872</td><td class="line">	strbuf_release(&amp;remote_ref);</td></tr>
+<tr><td class="num" id="LN873">873</td><td class="line">	strbuf_release(&amp;msg);</td></tr>
+<tr><td class="num" id="LN874">874</td><td class="line">	<span class='keyword'>return</span> result &lt; 0; <span class='comment'>/* return non-zero on conflicts */</span></td></tr>
+<tr><td class="num" id="LN875">875</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN876">876</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN877">877</td><td class="line"><span class='directive'>#define <span class='macro'>IGNORE_MISSING<span class='expansion'>1</span></span> 1</span></td></tr>
+<tr><td class="num" id="LN878">878</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN879">879</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> remove_one_note(<span class='keyword'>struct</span> notes_tree *t, <span class='keyword'>const</span> <span class='keyword'>char</span> *name, <span class='keyword'>unsigned</span> flag)</td></tr>
+<tr><td class="num" id="LN880">880</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN881">881</td><td class="line">	<span class='keyword'>int</span> status;</td></tr>
+<tr><td class="num" id="LN882">882</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> sha1[20];</td></tr>
+<tr><td class="num" id="LN883">883</td><td class="line">	<span class='keyword'>if</span> (get_sha1(name, sha1))</td></tr>
+<tr><td class="num" id="LN884">884</td><td class="line">		<span class='keyword'>return</span> <span class='macro'>error(_(<span class='string_literal'>"Failed to resolve '%s' as a valid ref."</span>), name)<span class='expansion'>(error(_("Failed to resolve '%s' as a valid ref."), name), const_error<br>())</span></span>;</td></tr>
+<tr><td class="num" id="LN885">885</td><td class="line">	status = remove_note(t, sha1);</td></tr>
+<tr><td class="num" id="LN886">886</td><td class="line">	<span class='keyword'>if</span> (status)</td></tr>
+<tr><td class="num" id="LN887">887</td><td class="line">		fprintf(<span class='macro'>stderr<span class='expansion'>__stderrp</span></span>, _(<span class='string_literal'>"Object %s has no note\n"</span>), name);</td></tr>
+<tr><td class="num" id="LN888">888</td><td class="line">	<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN889">889</td><td class="line">		fprintf(<span class='macro'>stderr<span class='expansion'>__stderrp</span></span>, _(<span class='string_literal'>"Removing note for object %s\n"</span>), name);</td></tr>
+<tr><td class="num" id="LN890">890</td><td class="line">	<span class='keyword'>return</span> (flag &amp; <span class='macro'>IGNORE_MISSING<span class='expansion'>1</span></span>) ? 0 : status;</td></tr>
+<tr><td class="num" id="LN891">891</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN892">892</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN893">893</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> remove_cmd(<span class='keyword'>int</span> argc, <span class='keyword'>const</span> <span class='keyword'>char</span> **argv, <span class='keyword'>const</span> <span class='keyword'>char</span> *prefix)</td></tr>
+<tr><td class="num" id="LN894">894</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN895">895</td><td class="line">	<span class='keyword'>unsigned</span> flag = 0;</td></tr>
+<tr><td class="num" id="LN896">896</td><td class="line">	<span class='keyword'>int</span> from_stdin = 0;</td></tr>
+<tr><td class="num" id="LN897">897</td><td class="line">	<span class='keyword'>struct</span> option options[] = {</td></tr>
+<tr><td class="num" id="LN898">898</td><td class="line">		<span class='macro'>OPT_BIT(0, <span class='string_literal'>"ignore-missing"</span>, &amp;flag,<span class='expansion'>{ OPTION_BIT, (0), ("ignore-missing"), (&amp;flag), ((void*)0<br>), (("attempt to remove non-existent note is not an error")),<br> PARSE_OPT_NOARG, ((void*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN899">899</td><td class="line">			<span class='macro'>N_(<span class='string_literal'>"attempt to remove non-existent note is not an error"</span>),<span class='expansion'>{ OPTION_BIT, (0), ("ignore-missing"), (&amp;flag), ((void*)0<br>), (("attempt to remove non-existent note is not an error")),<br> PARSE_OPT_NOARG, ((void*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN900">900</td><td class="line">			<span class='macro'>IGNORE_MISSING)<span class='expansion'>{ OPTION_BIT, (0), ("ignore-missing"), (&amp;flag), ((void*)0<br>), (("attempt to remove non-existent note is not an error")),<br> PARSE_OPT_NOARG, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN901">901</td><td class="line">		<span class='macro'>OPT_BOOL(0, <span class='string_literal'>"stdin"</span>, &amp;from_stdin,<span class='expansion'>{ OPTION_SET_INT, (0), ("stdin"), (&amp;from_stdin), ((void*)<br>0), (("read object names from the standard input")), PARSE_OPT_NOARG<br>, ((void*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN902">902</td><td class="line">			    <span class='macro'>N_(<span class='string_literal'>"read object names from the standard input"</span>))<span class='expansion'>{ OPTION_SET_INT, (0), ("stdin"), (&amp;from_stdin), ((void*)<br>0), (("read object names from the standard input")), PARSE_OPT_NOARG<br>, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN903">903</td><td class="line">		<span class='macro'>OPT_END()<span class='expansion'>{ OPTION_END }</span></span></td></tr>
+<tr><td class="num" id="LN904">904</td><td class="line">	};</td></tr>
+<tr><td class="num" id="LN905">905</td><td class="line">	<span class='keyword'>struct</span> notes_tree *t;</td></tr>
+<tr><td class="num" id="LN906">906</td><td class="line">	<span class='keyword'>int</span> retval = 0;</td></tr>
+<tr><td class="num" id="LN907">907</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN908">908</td><td class="line">	argc = parse_options(argc, argv, prefix, options,</td></tr>
+<tr><td class="num" id="LN909">909</td><td class="line">			     git_notes_remove_usage, 0);</td></tr>
+<tr><td class="num" id="LN910">910</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN911">911</td><td class="line">	t = init_notes_check(<span class='string_literal'>"remove"</span>, <span class='macro'>NOTES_INIT_WRITABLE<span class='expansion'>2</span></span>);</td></tr>
+<tr><td class="num" id="LN912">912</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN913">913</td><td class="line">	<span class='keyword'>if</span> (!argc &amp;&amp; !from_stdin) {</td></tr>
+<tr><td class="num" id="LN914">914</td><td class="line">		retval = remove_one_note(t, <span class='string_literal'>"HEAD"</span>, flag);</td></tr>
+<tr><td class="num" id="LN915">915</td><td class="line">	} <span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN916">916</td><td class="line">		<span class='keyword'>while</span> (*argv) {</td></tr>
+<tr><td class="num" id="LN917">917</td><td class="line">			retval |= remove_one_note(t, *argv, flag);</td></tr>
+<tr><td class="num" id="LN918">918</td><td class="line">			argv++;</td></tr>
+<tr><td class="num" id="LN919">919</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN920">920</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN921">921</td><td class="line">	<span class='keyword'>if</span> (from_stdin) {</td></tr>
+<tr><td class="num" id="LN922">922</td><td class="line">		<span class='keyword'>struct</span> strbuf sb = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN923">923</td><td class="line">		<span class='keyword'>while</span> (strbuf_getwholeline(&amp;sb, <span class='macro'>stdin<span class='expansion'>__stdinp</span></span>, '\n') != <span class='macro'>EOF<span class='expansion'>(-1)</span></span>) {</td></tr>
+<tr><td class="num" id="LN924">924</td><td class="line">			strbuf_rtrim(&amp;sb);</td></tr>
+<tr><td class="num" id="LN925">925</td><td class="line">			retval |= remove_one_note(t, sb.buf, flag);</td></tr>
+<tr><td class="num" id="LN926">926</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN927">927</td><td class="line">		strbuf_release(&amp;sb);</td></tr>
+<tr><td class="num" id="LN928">928</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN929">929</td><td class="line">	<span class='keyword'>if</span> (!retval)</td></tr>
+<tr><td class="num" id="LN930">930</td><td class="line">		commit_notes(t, <span class='string_literal'>"Notes removed by 'git notes remove'"</span>);</td></tr>
+<tr><td class="num" id="LN931">931</td><td class="line">	free_notes(t);</td></tr>
+<tr><td class="num" id="LN932">932</td><td class="line">	<span class='keyword'>return</span> retval;</td></tr>
+<tr><td class="num" id="LN933">933</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN934">934</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN935">935</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> prune(<span class='keyword'>int</span> argc, <span class='keyword'>const</span> <span class='keyword'>char</span> **argv, <span class='keyword'>const</span> <span class='keyword'>char</span> *prefix)</td></tr>
+<tr><td class="num" id="LN936">936</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN937">937</td><td class="line">	<span class='keyword'>struct</span> notes_tree *t;</td></tr>
+<tr><td class="num" id="LN938">938</td><td class="line">	<span class='keyword'>int</span> show_only = 0, verbose = 0;</td></tr>
+<tr><td class="num" id="LN939">939</td><td class="line">	<span class='keyword'>struct</span> option options[] = {</td></tr>
+<tr><td class="num" id="LN940">940</td><td class="line">		<span class='macro'>OPT__DRY_RUN(&amp;show_only, N_(<span class='string_literal'>"do not remove, show only"</span>))<span class='expansion'>{ OPTION_SET_INT, ('n'), ("dry-run"), ((&amp;show_only)), ((void<br>*)0), ((("do not remove, show only"))), PARSE_OPT_NOARG, ((void<br>*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN941">941</td><td class="line">		<span class='macro'>OPT__VERBOSE(&amp;verbose, N_(<span class='string_literal'>"report pruned notes"</span>))<span class='expansion'>{ OPTION_COUNTUP, ('v'), ("verbose"), ((&amp;verbose)), ((void<br>*)0), ((("report pruned notes"))), PARSE_OPT_NOARG }</span></span>,</td></tr>
+<tr><td class="num" id="LN942">942</td><td class="line">		<span class='macro'>OPT_END()<span class='expansion'>{ OPTION_END }</span></span></td></tr>
+<tr><td class="num" id="LN943">943</td><td class="line">	};</td></tr>
+<tr><td class="num" id="LN944">944</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN945">945</td><td class="line">	argc = parse_options(argc, argv, prefix, options, git_notes_prune_usage,</td></tr>
+<tr><td class="num" id="LN946">946</td><td class="line">			     0);</td></tr>
+<tr><td class="num" id="LN947">947</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN948">948</td><td class="line">	<span class='keyword'>if</span> (argc) {</td></tr>
+<tr><td class="num" id="LN949">949</td><td class="line">		<span class='macro'>error(_(<span class='string_literal'>"too many parameters"</span>))<span class='expansion'>(error(_("too many parameters")), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN950">950</td><td class="line">		usage_with_options(git_notes_prune_usage, options);</td></tr>
+<tr><td class="num" id="LN951">951</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN952">952</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN953">953</td><td class="line">	t = init_notes_check(<span class='string_literal'>"prune"</span>, <span class='macro'>NOTES_INIT_WRITABLE<span class='expansion'>2</span></span>);</td></tr>
+<tr><td class="num" id="LN954">954</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN955">955</td><td class="line">	prune_notes(t, (verbose ? <span class='macro'>NOTES_PRUNE_VERBOSE<span class='expansion'>1</span></span> : 0) |</td></tr>
+<tr><td class="num" id="LN956">956</td><td class="line">		(show_only ? <span class='macro'>NOTES_PRUNE_VERBOSE<span class='expansion'>1</span></span>|<span class='macro'>NOTES_PRUNE_DRYRUN<span class='expansion'>2</span></span> : 0) );</td></tr>
+<tr><td class="num" id="LN957">957</td><td class="line">	<span class='keyword'>if</span> (!show_only)</td></tr>
+<tr><td class="num" id="LN958">958</td><td class="line">		commit_notes(t, <span class='string_literal'>"Notes removed by 'git notes prune'"</span>);</td></tr>
+<tr><td class="num" id="LN959">959</td><td class="line">	free_notes(t);</td></tr>
+<tr><td class="num" id="LN960">960</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN961">961</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN962">962</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN963">963</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> get_ref(<span class='keyword'>int</span> argc, <span class='keyword'>const</span> <span class='keyword'>char</span> **argv, <span class='keyword'>const</span> <span class='keyword'>char</span> *prefix)</td></tr>
+<tr><td class="num" id="LN964">964</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN965">965</td><td class="line">	<span class='keyword'>struct</span> option options[] = { <span class='macro'>OPT_END()<span class='expansion'>{ OPTION_END }</span></span> };</td></tr>
+<tr><td class="num" id="LN966">966</td><td class="line">	argc = parse_options(argc, argv, prefix, options,</td></tr>
+<tr><td class="num" id="LN967">967</td><td class="line">			     git_notes_get_ref_usage, 0);</td></tr>
+<tr><td class="num" id="LN968">968</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN969">969</td><td class="line">	<span class='keyword'>if</span> (argc) {</td></tr>
+<tr><td class="num" id="LN970">970</td><td class="line">		<span class='macro'>error(_(<span class='string_literal'>"too many parameters"</span>))<span class='expansion'>(error(_("too many parameters")), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN971">971</td><td class="line">		usage_with_options(git_notes_get_ref_usage, options);</td></tr>
+<tr><td class="num" id="LN972">972</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN973">973</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN974">974</td><td class="line">	puts(default_notes_ref());</td></tr>
+<tr><td class="num" id="LN975">975</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN976">976</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN977">977</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN978">978</td><td class="line"><span class='keyword'>int</span> cmd_notes(<span class='keyword'>int</span> argc, <span class='keyword'>const</span> <span class='keyword'>char</span> **argv, <span class='keyword'>const</span> <span class='keyword'>char</span> *prefix)</td></tr>
+<tr><td class="num" id="LN979">979</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN980">980</td><td class="line">	<span class='keyword'>int</span> result;</td></tr>
+<tr><td class="num" id="LN981">981</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *override_notes_ref = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN982">982</td><td class="line">	<span class='keyword'>struct</span> option options[] = {</td></tr>
+<tr><td class="num" id="LN983">983</td><td class="line">		<span class='macro'>OPT_STRING(0, <span class='string_literal'>"ref"</span>, &amp;override_notes_ref, N_(<span class='string_literal'>"notes-ref"</span>),<span class='expansion'>{ OPTION_STRING, (0), ("ref"), (&amp;override_notes_ref), (("notes-ref"<br>)), (("use notes from &lt;notes-ref&gt;")) }</span></span></td></tr>
+<tr><td class="num" id="LN984">984</td><td class="line">			   <span class='macro'>N_(<span class='string_literal'>"use notes from &lt;notes-ref&gt;"</span>))<span class='expansion'>{ OPTION_STRING, (0), ("ref"), (&amp;override_notes_ref), (("notes-ref"<br>)), (("use notes from &lt;notes-ref&gt;")) }</span></span>,</td></tr>
+<tr><td class="num" id="LN985">985</td><td class="line">		<span class='macro'>OPT_END()<span class='expansion'>{ OPTION_END }</span></span></td></tr>
+<tr><td class="num" id="LN986">986</td><td class="line">	};</td></tr>
+<tr><td class="num" id="LN987">987</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN988">988</td><td class="line">	git_config(git_default_config, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>);</td></tr>
+<tr><td class="num" id="LN989">989</td><td class="line">	argc = parse_options(argc, argv, prefix, options, git_notes_usage,</td></tr>
+<tr><td class="num" id="LN990">990</td><td class="line">			     PARSE_OPT_STOP_AT_NON_OPTION);</td></tr>
+<tr><td class="num" id="LN991">991</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN992">992</td><td class="line">	<span class='keyword'>if</span> (override_notes_ref) {</td></tr>
+<tr><td class="num" id="LN993">993</td><td class="line">		<span class='keyword'>struct</span> strbuf sb = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN994">994</td><td class="line">		strbuf_addstr(&amp;sb, override_notes_ref);</td></tr>
+<tr><td class="num" id="LN995">995</td><td class="line">		expand_notes_ref(&amp;sb);</td></tr>
+<tr><td class="num" id="LN996">996</td><td class="line">		setenv(<span class='string_literal'>"GIT_NOTES_REF"</span>, sb.buf, 1);</td></tr>
+<tr><td class="num" id="LN997">997</td><td class="line">		strbuf_release(&amp;sb);</td></tr>
+<tr><td class="num" id="LN998">998</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN999">999</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN1000">1000</td><td class="line">	<span class='keyword'>if</span> (argc &lt; 1 || !strcmp(argv[0], <span class='string_literal'>"list"</span>))</td></tr>
+<tr><td class="num" id="LN1001">1001</td><td class="line">		result = list(argc, argv, prefix);</td></tr>
+<tr><td class="num" id="LN1002">1002</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (!strcmp(argv[0], <span class='string_literal'>"add"</span>))</td></tr>
+<tr><td class="num" id="LN1003">1003</td><td class="line">		result = add(argc, argv, prefix);</td></tr>
+<tr><td class="num" id="LN1004">1004</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (!strcmp(argv[0], <span class='string_literal'>"copy"</span>))</td></tr>
+<tr><td class="num" id="LN1005">1005</td><td class="line">		result = copy(argc, argv, prefix);</td></tr>
+<tr><td class="num" id="LN1006">1006</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (!strcmp(argv[0], <span class='string_literal'>"append"</span>) || !strcmp(argv[0], <span class='string_literal'>"edit"</span>))</td></tr>
+<tr><td class="num" id="LN1007">1007</td><td class="line">		result = append_edit(argc, argv, prefix);</td></tr>
+<tr><td class="num" id="LN1008">1008</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (!strcmp(argv[0], <span class='string_literal'>"show"</span>))</td></tr>
+<tr><td class="num" id="LN1009">1009</td><td class="line">		result = show(argc, argv, prefix);</td></tr>
+<tr><td class="num" id="LN1010">1010</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (!strcmp(argv[0], <span class='string_literal'>"merge"</span>))</td></tr>
+<tr><td class="num" id="LN1011">1011</td><td class="line">		result = merge(argc, argv, prefix);</td></tr>
+<tr><td class="num" id="LN1012">1012</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (!strcmp(argv[0], <span class='string_literal'>"remove"</span>))</td></tr>
+<tr><td class="num" id="LN1013">1013</td><td class="line">		result = remove_cmd(argc, argv, prefix);</td></tr>
+<tr><td class="num" id="LN1014">1014</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (!strcmp(argv[0], <span class='string_literal'>"prune"</span>))</td></tr>
+<tr><td class="num" id="LN1015">1015</td><td class="line">		result = prune(argc, argv, prefix);</td></tr>
+<tr><td class="num" id="LN1016">1016</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (!strcmp(argv[0], <span class='string_literal'>"get-ref"</span>))</td></tr>
+<tr><td class="num" id="LN1017">1017</td><td class="line">		result = get_ref(argc, argv, prefix);</td></tr>
+<tr><td class="num" id="LN1018">1018</td><td class="line">	<span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN1019">1019</td><td class="line">		result = <span class="mrange"><span class='macro'>error</span>(_(<span class='string_literal'>"unknown subcommand: %s"</span>), argv[0])<span class='expansion'>(error(_("unknown subcommand: %s"), argv[0]), const_error())</span></span>;</td></tr>
+<tr><td class="num"></td><td class="line"><div id="EndPath" class="msg msgEvent" style="margin-left:17ex">Value stored to 'result' is never read</div></td></tr>
+<tr><td class="num" id="LN1020">1020</td><td class="line">		usage_with_options(git_notes_usage, options);</td></tr>
+<tr><td class="num" id="LN1021">1021</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN1022">1022</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN1023">1023</td><td class="line">	<span class='keyword'>return</span> result ? 1 : 0;</td></tr>
+<tr><td class="num" id="LN1024">1024</td><td class="line">}</td></tr>
+</table></body></html>

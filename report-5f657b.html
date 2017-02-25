@@ -1,0 +1,766 @@
+<!doctype html>
+<html>
+<head>
+<title>diffcore-rename.c</title>
+<style type="text/css">
+ body { color:#000000; background-color:#ffffff }
+ body { font-family:Helvetica, sans-serif; font-size:10pt }
+ h1 { font-size:14pt }
+ .code { border-collapse:collapse; width:100%; }
+ .code { font-family: "Monospace", monospace; font-size:10pt }
+ .code { line-height: 1.2em }
+ .comment { color: green; font-style: oblique }
+ .keyword { color: blue }
+ .string_literal { color: red }
+ .directive { color: darkmagenta }
+ .expansion { display: none; }
+ .macro:hover .expansion { display: block; border: 2px solid #FF0000; padding: 2px; background-color:#FFF0F0; font-weight: normal;   -webkit-border-radius:5px;  -webkit-box-shadow:1px 1px 7px #000; position: absolute; top: -1em; left:10em; z-index: 1 } 
+ .macro { color: darkmagenta; background-color:LemonChiffon; position: relative }
+ .num { width:2.5em; padding-right:2ex; background-color:#eeeeee }
+ .num { text-align:right; font-size:8pt }
+ .num { color:#444444 }
+ .line { padding-left: 1ex; border-left: 3px solid #ccc }
+ .line { white-space: pre }
+ .msg { -webkit-box-shadow:1px 1px 7px #000 }
+ .msg { -webkit-border-radius:5px }
+ .msg { font-family:Helvetica, sans-serif; font-size:8pt }
+ .msg { float:left }
+ .msg { padding:0.25em 1ex 0.25em 1ex }
+ .msg { margin-top:10px; margin-bottom:10px }
+ .msg { font-weight:bold }
+ .msg { max-width:60em; word-wrap: break-word; white-space: pre-wrap }
+ .msgT { padding:0x; spacing:0x }
+ .msgEvent { background-color:#fff8b4; color:#000000 }
+ .msgControl { background-color:#bbbbbb; color:#000000 }
+ .mrange { background-color:#dfddf3 }
+ .mrange { border-bottom:1px solid #6F9DBE }
+ .PathIndex { font-weight: bold; padding:0px 5px; margin-right:5px; }
+ .PathIndex { -webkit-border-radius:8px }
+ .PathIndexEvent { background-color:#bfba87 }
+ .PathIndexControl { background-color:#8c8c8c }
+ .PathNav a { text-decoration:none; font-size: larger }
+ .CodeInsertionHint { font-weight: bold; background-color: #10dd10 }
+ .CodeRemovalHint { background-color:#de1010 }
+ .CodeRemovalHint { border-bottom:1px solid #6F9DBE }
+ table.simpletable {
+   padding: 5px;
+   font-size:12pt;
+   margin:20px;
+   border-collapse: collapse; border-spacing: 0px;
+ }
+ td.rowname {
+   text-align:right; font-weight:bold; color:#444444;
+   padding-right:2ex; }
+</style>
+</head>
+<body>
+<!-- BUGDESC Value stored to 'rename_count' is never read -->
+
+<!-- BUGTYPE Dead increment -->
+
+<!-- BUGCATEGORY Dead store -->
+
+<!-- BUGFILE /Users/lars/Code/git/diffcore-rename.c -->
+
+<!-- FILENAME diffcore-rename.c -->
+
+<!-- FUNCTIONNAME diffcore_rename -->
+
+<!-- ISSUEHASHCONTENTOFLINEINCONTEXT 2c96100cbdb1c4ea4f4720551cd7b71e -->
+
+<!-- BUGLINE 583 -->
+
+<!-- BUGCOLUMN 3 -->
+
+<!-- BUGPATHLENGTH 1 -->
+
+<!-- BUGMETAEND -->
+<!-- REPORTHEADER -->
+<h3>Bug Summary</h3>
+<table class="simpletable">
+<tr><td class="rowname">File:</td><td>diffcore-rename.c</td></tr>
+<tr><td class="rowname">Location:</td><td><a href="#EndPath">line 583, column 3</a></td></tr>
+<tr><td class="rowname">Description:</td><td>Value stored to 'rename_count' is never read</td></tr>
+</table>
+<!-- REPORTSUMMARYEXTRA -->
+<h3>Annotated Source Code</h3>
+<table class="code">
+<tr><td class="num" id="LN1">1</td><td class="line"><span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN2">2</td><td class="line"> <span class='comment'>* Copyright (C) 2005 Junio C Hamano</span></td></tr>
+<tr><td class="num" id="LN3">3</td><td class="line"> <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN4">4</td><td class="line"><span class='directive'>#include "cache.h"</span></td></tr>
+<tr><td class="num" id="LN5">5</td><td class="line"><span class='directive'>#include "diff.h"</span></td></tr>
+<tr><td class="num" id="LN6">6</td><td class="line"><span class='directive'>#include "diffcore.h"</span></td></tr>
+<tr><td class="num" id="LN7">7</td><td class="line"><span class='directive'>#include "hashmap.h"</span></td></tr>
+<tr><td class="num" id="LN8">8</td><td class="line"><span class='directive'>#include "progress.h"</span></td></tr>
+<tr><td class="num" id="LN9">9</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN10">10</td><td class="line"><span class='comment'>/* Table of rename/copy destinations */</span></td></tr>
+<tr><td class="num" id="LN11">11</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN12">12</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>struct</span> diff_rename_dst {</td></tr>
+<tr><td class="num" id="LN13">13</td><td class="line">	<span class='keyword'>struct</span> diff_filespec *two;</td></tr>
+<tr><td class="num" id="LN14">14</td><td class="line">	<span class='keyword'>struct</span> diff_filepair *pair;</td></tr>
+<tr><td class="num" id="LN15">15</td><td class="line">} *rename_dst;</td></tr>
+<tr><td class="num" id="LN16">16</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> rename_dst_nr, rename_dst_alloc;</td></tr>
+<tr><td class="num" id="LN17">17</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN18">18</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> find_rename_dst(<span class='keyword'>struct</span> diff_filespec *two)</td></tr>
+<tr><td class="num" id="LN19">19</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN20">20</td><td class="line">	<span class='keyword'>int</span> first, last;</td></tr>
+<tr><td class="num" id="LN21">21</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN22">22</td><td class="line">	first = 0;</td></tr>
+<tr><td class="num" id="LN23">23</td><td class="line">	last = rename_dst_nr;</td></tr>
+<tr><td class="num" id="LN24">24</td><td class="line">	<span class='keyword'>while</span> (last &gt; first) {</td></tr>
+<tr><td class="num" id="LN25">25</td><td class="line">		<span class='keyword'>int</span> next = (last + first) &gt;&gt; 1;</td></tr>
+<tr><td class="num" id="LN26">26</td><td class="line">		<span class='keyword'>struct</span> diff_rename_dst *dst = &amp;(rename_dst[next]);</td></tr>
+<tr><td class="num" id="LN27">27</td><td class="line">		<span class='keyword'>int</span> cmp = strcmp(two-&gt;path, dst-&gt;two-&gt;path);</td></tr>
+<tr><td class="num" id="LN28">28</td><td class="line">		<span class='keyword'>if</span> (!cmp)</td></tr>
+<tr><td class="num" id="LN29">29</td><td class="line">			<span class='keyword'>return</span> next;</td></tr>
+<tr><td class="num" id="LN30">30</td><td class="line">		<span class='keyword'>if</span> (cmp &lt; 0) {</td></tr>
+<tr><td class="num" id="LN31">31</td><td class="line">			last = next;</td></tr>
+<tr><td class="num" id="LN32">32</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN33">33</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN34">34</td><td class="line">		first = next+1;</td></tr>
+<tr><td class="num" id="LN35">35</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN36">36</td><td class="line">	<span class='keyword'>return</span> -first - 1;</td></tr>
+<tr><td class="num" id="LN37">37</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN38">38</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN39">39</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>struct</span> diff_rename_dst *locate_rename_dst(<span class='keyword'>struct</span> diff_filespec *two)</td></tr>
+<tr><td class="num" id="LN40">40</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN41">41</td><td class="line">	<span class='keyword'>int</span> ofs = find_rename_dst(two);</td></tr>
+<tr><td class="num" id="LN42">42</td><td class="line">	<span class='keyword'>return</span> ofs &lt; 0 ? <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span> : &amp;rename_dst[ofs];</td></tr>
+<tr><td class="num" id="LN43">43</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN44">44</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN45">45</td><td class="line"><span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN46">46</td><td class="line"> <span class='comment'>* Returns 0 on success, -1 if we found a duplicate.</span></td></tr>
+<tr><td class="num" id="LN47">47</td><td class="line"> <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN48">48</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> add_rename_dst(<span class='keyword'>struct</span> diff_filespec *two)</td></tr>
+<tr><td class="num" id="LN49">49</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN50">50</td><td class="line">	<span class='keyword'>int</span> first = find_rename_dst(two);</td></tr>
+<tr><td class="num" id="LN51">51</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN52">52</td><td class="line">	<span class='keyword'>if</span> (first &gt;= 0)</td></tr>
+<tr><td class="num" id="LN53">53</td><td class="line">		<span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN54">54</td><td class="line">	first = -first - 1;</td></tr>
+<tr><td class="num" id="LN55">55</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN56">56</td><td class="line">	<span class='comment'>/* insert to make it at "first" */</span></td></tr>
+<tr><td class="num" id="LN57">57</td><td class="line">	<span class='macro'>ALLOC_GROW(rename_dst, rename_dst_nr + 1, rename_dst_alloc)<span class='expansion'>do { if ((rename_dst_nr + 1) &gt; rename_dst_alloc) { if ((((<br>rename_dst_alloc)+16)*3/2) &lt; (rename_dst_nr + 1)) rename_dst_alloc<br> = (rename_dst_nr + 1); else rename_dst_alloc = (((rename_dst_alloc<br>)+16)*3/2); (rename_dst) = xrealloc((rename_dst), st_mult(sizeof<br>(*(rename_dst)), (rename_dst_alloc))); } } while (0)</span></span>;</td></tr>
+<tr><td class="num" id="LN58">58</td><td class="line">	rename_dst_nr++;</td></tr>
+<tr><td class="num" id="LN59">59</td><td class="line">	<span class='keyword'>if</span> (first &lt; rename_dst_nr)</td></tr>
+<tr><td class="num" id="LN60">60</td><td class="line">		<span class='macro'>memmove(rename_dst + first + 1, rename_dst + first,<span class='expansion'>__builtin___memmove_chk (rename_dst + first + 1, rename_dst +<br> first, (rename_dst_nr - first - 1) * sizeof(*rename_dst), __builtin_object_size<br> (rename_dst + first + 1, 0))</span></span></td></tr>
+<tr><td class="num" id="LN61">61</td><td class="line">			<span class='macro'>(rename_dst_nr - first - 1) * <span class='keyword'>sizeof</span>(*rename_dst))<span class='expansion'>__builtin___memmove_chk (rename_dst + first + 1, rename_dst +<br> first, (rename_dst_nr - first - 1) * sizeof(*rename_dst), __builtin_object_size<br> (rename_dst + first + 1, 0))</span></span>;</td></tr>
+<tr><td class="num" id="LN62">62</td><td class="line">	rename_dst[first].two = alloc_filespec(two-&gt;path);</td></tr>
+<tr><td class="num" id="LN63">63</td><td class="line">	fill_filespec(rename_dst[first].two, two-&gt;oid.hash, two-&gt;oid_valid,</td></tr>
+<tr><td class="num" id="LN64">64</td><td class="line">		      two-&gt;mode);</td></tr>
+<tr><td class="num" id="LN65">65</td><td class="line">	rename_dst[first].pair = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN66">66</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN67">67</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN68">68</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN69">69</td><td class="line"><span class='comment'>/* Table of rename/copy src files */</span></td></tr>
+<tr><td class="num" id="LN70">70</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>struct</span> diff_rename_src {</td></tr>
+<tr><td class="num" id="LN71">71</td><td class="line">	<span class='keyword'>struct</span> diff_filepair *p;</td></tr>
+<tr><td class="num" id="LN72">72</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>short</span> score; <span class='comment'>/* to remember the break score */</span></td></tr>
+<tr><td class="num" id="LN73">73</td><td class="line">} *rename_src;</td></tr>
+<tr><td class="num" id="LN74">74</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> rename_src_nr, rename_src_alloc;</td></tr>
+<tr><td class="num" id="LN75">75</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN76">76</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>struct</span> diff_rename_src *register_rename_src(<span class='keyword'>struct</span> diff_filepair *p)</td></tr>
+<tr><td class="num" id="LN77">77</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN78">78</td><td class="line">	<span class='keyword'>int</span> first, last;</td></tr>
+<tr><td class="num" id="LN79">79</td><td class="line">	<span class='keyword'>struct</span> diff_filespec *one = p-&gt;one;</td></tr>
+<tr><td class="num" id="LN80">80</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>short</span> score = p-&gt;score;</td></tr>
+<tr><td class="num" id="LN81">81</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN82">82</td><td class="line">	first = 0;</td></tr>
+<tr><td class="num" id="LN83">83</td><td class="line">	last = rename_src_nr;</td></tr>
+<tr><td class="num" id="LN84">84</td><td class="line">	<span class='keyword'>while</span> (last &gt; first) {</td></tr>
+<tr><td class="num" id="LN85">85</td><td class="line">		<span class='keyword'>int</span> next = (last + first) &gt;&gt; 1;</td></tr>
+<tr><td class="num" id="LN86">86</td><td class="line">		<span class='keyword'>struct</span> diff_rename_src *src = &amp;(rename_src[next]);</td></tr>
+<tr><td class="num" id="LN87">87</td><td class="line">		<span class='keyword'>int</span> cmp = strcmp(one-&gt;path, src-&gt;p-&gt;one-&gt;path);</td></tr>
+<tr><td class="num" id="LN88">88</td><td class="line">		<span class='keyword'>if</span> (!cmp)</td></tr>
+<tr><td class="num" id="LN89">89</td><td class="line">			<span class='keyword'>return</span> src;</td></tr>
+<tr><td class="num" id="LN90">90</td><td class="line">		<span class='keyword'>if</span> (cmp &lt; 0) {</td></tr>
+<tr><td class="num" id="LN91">91</td><td class="line">			last = next;</td></tr>
+<tr><td class="num" id="LN92">92</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN93">93</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN94">94</td><td class="line">		first = next+1;</td></tr>
+<tr><td class="num" id="LN95">95</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN96">96</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN97">97</td><td class="line">	<span class='comment'>/* insert to make it at "first" */</span></td></tr>
+<tr><td class="num" id="LN98">98</td><td class="line">	<span class='macro'>ALLOC_GROW(rename_src, rename_src_nr + 1, rename_src_alloc)<span class='expansion'>do { if ((rename_src_nr + 1) &gt; rename_src_alloc) { if ((((<br>rename_src_alloc)+16)*3/2) &lt; (rename_src_nr + 1)) rename_src_alloc<br> = (rename_src_nr + 1); else rename_src_alloc = (((rename_src_alloc<br>)+16)*3/2); (rename_src) = xrealloc((rename_src), st_mult(sizeof<br>(*(rename_src)), (rename_src_alloc))); } } while (0)</span></span>;</td></tr>
+<tr><td class="num" id="LN99">99</td><td class="line">	rename_src_nr++;</td></tr>
+<tr><td class="num" id="LN100">100</td><td class="line">	<span class='keyword'>if</span> (first &lt; rename_src_nr)</td></tr>
+<tr><td class="num" id="LN101">101</td><td class="line">		<span class='macro'>memmove(rename_src + first + 1, rename_src + first,<span class='expansion'>__builtin___memmove_chk (rename_src + first + 1, rename_src +<br> first, (rename_src_nr - first - 1) * sizeof(*rename_src), __builtin_object_size<br> (rename_src + first + 1, 0))</span></span></td></tr>
+<tr><td class="num" id="LN102">102</td><td class="line">			<span class='macro'>(rename_src_nr - first - 1) * <span class='keyword'>sizeof</span>(*rename_src))<span class='expansion'>__builtin___memmove_chk (rename_src + first + 1, rename_src +<br> first, (rename_src_nr - first - 1) * sizeof(*rename_src), __builtin_object_size<br> (rename_src + first + 1, 0))</span></span>;</td></tr>
+<tr><td class="num" id="LN103">103</td><td class="line">	rename_src[first].p = p;</td></tr>
+<tr><td class="num" id="LN104">104</td><td class="line">	rename_src[first].score = score;</td></tr>
+<tr><td class="num" id="LN105">105</td><td class="line">	<span class='keyword'>return</span> &amp;(rename_src[first]);</td></tr>
+<tr><td class="num" id="LN106">106</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN107">107</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN108">108</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> basename_same(<span class='keyword'>struct</span> diff_filespec *src, <span class='keyword'>struct</span> diff_filespec *dst)</td></tr>
+<tr><td class="num" id="LN109">109</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN110">110</td><td class="line">	<span class='keyword'>int</span> src_len = strlen(src-&gt;path), dst_len = strlen(dst-&gt;path);</td></tr>
+<tr><td class="num" id="LN111">111</td><td class="line">	<span class='keyword'>while</span> (src_len &amp;&amp; dst_len) {</td></tr>
+<tr><td class="num" id="LN112">112</td><td class="line">		<span class='keyword'>char</span> c1 = src-&gt;path[--src_len];</td></tr>
+<tr><td class="num" id="LN113">113</td><td class="line">		<span class='keyword'>char</span> c2 = dst-&gt;path[--dst_len];</td></tr>
+<tr><td class="num" id="LN114">114</td><td class="line">		<span class='keyword'>if</span> (c1 != c2)</td></tr>
+<tr><td class="num" id="LN115">115</td><td class="line">			<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN116">116</td><td class="line">		<span class='keyword'>if</span> (c1 == '/')</td></tr>
+<tr><td class="num" id="LN117">117</td><td class="line">			<span class='keyword'>return</span> 1;</td></tr>
+<tr><td class="num" id="LN118">118</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN119">119</td><td class="line">	<span class='keyword'>return</span> (!src_len || src-&gt;path[src_len - 1] == '/') &amp;&amp;</td></tr>
+<tr><td class="num" id="LN120">120</td><td class="line">		(!dst_len || dst-&gt;path[dst_len - 1] == '/');</td></tr>
+<tr><td class="num" id="LN121">121</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN122">122</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN123">123</td><td class="line"><span class='keyword'>struct</span> diff_score {</td></tr>
+<tr><td class="num" id="LN124">124</td><td class="line">	<span class='keyword'>int</span> src; <span class='comment'>/* index in rename_src */</span></td></tr>
+<tr><td class="num" id="LN125">125</td><td class="line">	<span class='keyword'>int</span> dst; <span class='comment'>/* index in rename_dst */</span></td></tr>
+<tr><td class="num" id="LN126">126</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>short</span> score;</td></tr>
+<tr><td class="num" id="LN127">127</td><td class="line">	<span class='keyword'>short</span> name_score;</td></tr>
+<tr><td class="num" id="LN128">128</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN129">129</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN130">130</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> estimate_similarity(<span class='keyword'>struct</span> diff_filespec *src,</td></tr>
+<tr><td class="num" id="LN131">131</td><td class="line">			       <span class='keyword'>struct</span> diff_filespec *dst,</td></tr>
+<tr><td class="num" id="LN132">132</td><td class="line">			       <span class='keyword'>int</span> minimum_score)</td></tr>
+<tr><td class="num" id="LN133">133</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN134">134</td><td class="line">	<span class='comment'>/* src points at a file that existed in the original tree (or</span></td></tr>
+<tr><td class="num" id="LN135">135</td><td class="line">	 <span class='comment'>* optionally a file in the destination tree) and dst points</span></td></tr>
+<tr><td class="num" id="LN136">136</td><td class="line">	 <span class='comment'>* at a newly created file.  They may be quite similar, in which</span></td></tr>
+<tr><td class="num" id="LN137">137</td><td class="line">	 <span class='comment'>* case we want to say src is renamed to dst or src is copied into</span></td></tr>
+<tr><td class="num" id="LN138">138</td><td class="line">	 <span class='comment'>* dst, and then some edit has been applied to dst.</span></td></tr>
+<tr><td class="num" id="LN139">139</td><td class="line">	 <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN140">140</td><td class="line">	 <span class='comment'>* Compare them and return how similar they are, representing</span></td></tr>
+<tr><td class="num" id="LN141">141</td><td class="line">	 <span class='comment'>* the score as an integer between 0 and MAX_SCORE.</span></td></tr>
+<tr><td class="num" id="LN142">142</td><td class="line">	 <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN143">143</td><td class="line">	 <span class='comment'>* When there is an exact match, it is considered a better</span></td></tr>
+<tr><td class="num" id="LN144">144</td><td class="line">	 <span class='comment'>* match than anything else; the destination does not even</span></td></tr>
+<tr><td class="num" id="LN145">145</td><td class="line">	 <span class='comment'>* call into this function in that case.</span></td></tr>
+<tr><td class="num" id="LN146">146</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN147">147</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>long</span> max_size, delta_size, base_size, src_copied, literal_added;</td></tr>
+<tr><td class="num" id="LN148">148</td><td class="line">	<span class='keyword'>int</span> score;</td></tr>
+<tr><td class="num" id="LN149">149</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN150">150</td><td class="line">	<span class='comment'>/* We deal only with regular files.  Symlink renames are handled</span></td></tr>
+<tr><td class="num" id="LN151">151</td><td class="line">	 <span class='comment'>* only when they are exact matches --- in other words, no edits</span></td></tr>
+<tr><td class="num" id="LN152">152</td><td class="line">	 <span class='comment'>* after renaming.</span></td></tr>
+<tr><td class="num" id="LN153">153</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN154">154</td><td class="line">	<span class='keyword'>if</span> (!<span class='macro'>S_ISREG(src-&gt;mode)<span class='expansion'>(((src-&gt;mode) &amp; 0170000) == 0100000)</span></span> || !<span class='macro'>S_ISREG(dst-&gt;mode)<span class='expansion'>(((dst-&gt;mode) &amp; 0170000) == 0100000)</span></span>)</td></tr>
+<tr><td class="num" id="LN155">155</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN156">156</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN157">157</td><td class="line">	<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN158">158</td><td class="line">	 <span class='comment'>* Need to check that source and destination sizes are</span></td></tr>
+<tr><td class="num" id="LN159">159</td><td class="line">	 <span class='comment'>* filled in before comparing them.</span></td></tr>
+<tr><td class="num" id="LN160">160</td><td class="line">	 <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN161">161</td><td class="line">	 <span class='comment'>* If we already have "cnt_data" filled in, we know it's</span></td></tr>
+<tr><td class="num" id="LN162">162</td><td class="line">	 <span class='comment'>* all good (avoid checking the size for zero, as that</span></td></tr>
+<tr><td class="num" id="LN163">163</td><td class="line">	 <span class='comment'>* is a possible size - we really should have a flag to</span></td></tr>
+<tr><td class="num" id="LN164">164</td><td class="line">	 <span class='comment'>* say whether the size is valid or not!)</span></td></tr>
+<tr><td class="num" id="LN165">165</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN166">166</td><td class="line">	<span class='keyword'>if</span> (!src-&gt;cnt_data &amp;&amp;</td></tr>
+<tr><td class="num" id="LN167">167</td><td class="line">	    diff_populate_filespec(src, <span class='macro'>CHECK_SIZE_ONLY<span class='expansion'>1</span></span>))</td></tr>
+<tr><td class="num" id="LN168">168</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN169">169</td><td class="line">	<span class='keyword'>if</span> (!dst-&gt;cnt_data &amp;&amp;</td></tr>
+<tr><td class="num" id="LN170">170</td><td class="line">	    diff_populate_filespec(dst, <span class='macro'>CHECK_SIZE_ONLY<span class='expansion'>1</span></span>))</td></tr>
+<tr><td class="num" id="LN171">171</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN172">172</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN173">173</td><td class="line">	max_size = ((src-&gt;size &gt; dst-&gt;size) ? src-&gt;size : dst-&gt;size);</td></tr>
+<tr><td class="num" id="LN174">174</td><td class="line">	base_size = ((src-&gt;size &lt; dst-&gt;size) ? src-&gt;size : dst-&gt;size);</td></tr>
+<tr><td class="num" id="LN175">175</td><td class="line">	delta_size = max_size - base_size;</td></tr>
+<tr><td class="num" id="LN176">176</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN177">177</td><td class="line">	<span class='comment'>/* We would not consider edits that change the file size so</span></td></tr>
+<tr><td class="num" id="LN178">178</td><td class="line">	 <span class='comment'>* drastically.  delta_size must be smaller than</span></td></tr>
+<tr><td class="num" id="LN179">179</td><td class="line">	 <span class='comment'>* (MAX_SCORE-minimum_score)/MAX_SCORE * min(src-&gt;size, dst-&gt;size).</span></td></tr>
+<tr><td class="num" id="LN180">180</td><td class="line">	 <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN181">181</td><td class="line">	 <span class='comment'>* Note that base_size == 0 case is handled here already</span></td></tr>
+<tr><td class="num" id="LN182">182</td><td class="line">	 <span class='comment'>* and the final score computation below would not have a</span></td></tr>
+<tr><td class="num" id="LN183">183</td><td class="line">	 <span class='comment'>* divide-by-zero issue.</span></td></tr>
+<tr><td class="num" id="LN184">184</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN185">185</td><td class="line">	<span class='keyword'>if</span> (max_size * (<span class='macro'>MAX_SCORE<span class='expansion'>60000.0</span></span>-minimum_score) &lt; delta_size * <span class='macro'>MAX_SCORE<span class='expansion'>60000.0</span></span>)</td></tr>
+<tr><td class="num" id="LN186">186</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN187">187</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN188">188</td><td class="line">	<span class='keyword'>if</span> (!src-&gt;cnt_data &amp;&amp; diff_populate_filespec(src, 0))</td></tr>
+<tr><td class="num" id="LN189">189</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN190">190</td><td class="line">	<span class='keyword'>if</span> (!dst-&gt;cnt_data &amp;&amp; diff_populate_filespec(dst, 0))</td></tr>
+<tr><td class="num" id="LN191">191</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN192">192</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN193">193</td><td class="line">	<span class='keyword'>if</span> (diffcore_count_changes(src, dst,</td></tr>
+<tr><td class="num" id="LN194">194</td><td class="line">				   &amp;src-&gt;cnt_data, &amp;dst-&gt;cnt_data,</td></tr>
+<tr><td class="num" id="LN195">195</td><td class="line">				   &amp;src_copied, &amp;literal_added))</td></tr>
+<tr><td class="num" id="LN196">196</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN197">197</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN198">198</td><td class="line">	<span class='comment'>/* How similar are they?</span></td></tr>
+<tr><td class="num" id="LN199">199</td><td class="line">	 <span class='comment'>* what percentage of material in dst are from source?</span></td></tr>
+<tr><td class="num" id="LN200">200</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN201">201</td><td class="line">	<span class='keyword'>if</span> (!dst-&gt;size)</td></tr>
+<tr><td class="num" id="LN202">202</td><td class="line">		score = 0; <span class='comment'>/* should not happen */</span></td></tr>
+<tr><td class="num" id="LN203">203</td><td class="line">	<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN204">204</td><td class="line">		score = (<span class='keyword'>int</span>)(src_copied * <span class='macro'>MAX_SCORE<span class='expansion'>60000.0</span></span> / max_size);</td></tr>
+<tr><td class="num" id="LN205">205</td><td class="line">	<span class='keyword'>return</span> score;</td></tr>
+<tr><td class="num" id="LN206">206</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN207">207</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN208">208</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> record_rename_pair(<span class='keyword'>int</span> dst_index, <span class='keyword'>int</span> src_index, <span class='keyword'>int</span> score)</td></tr>
+<tr><td class="num" id="LN209">209</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN210">210</td><td class="line">	<span class='keyword'>struct</span> diff_filespec *src, *dst;</td></tr>
+<tr><td class="num" id="LN211">211</td><td class="line">	<span class='keyword'>struct</span> diff_filepair *dp;</td></tr>
+<tr><td class="num" id="LN212">212</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN213">213</td><td class="line">	<span class='keyword'>if</span> (rename_dst[dst_index].pair)</td></tr>
+<tr><td class="num" id="LN214">214</td><td class="line">		die(<span class='string_literal'>"internal error: dst already matched."</span>);</td></tr>
+<tr><td class="num" id="LN215">215</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN216">216</td><td class="line">	src = rename_src[src_index].p-&gt;one;</td></tr>
+<tr><td class="num" id="LN217">217</td><td class="line">	src-&gt;rename_used++;</td></tr>
+<tr><td class="num" id="LN218">218</td><td class="line">	src-&gt;count++;</td></tr>
+<tr><td class="num" id="LN219">219</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN220">220</td><td class="line">	dst = rename_dst[dst_index].two;</td></tr>
+<tr><td class="num" id="LN221">221</td><td class="line">	dst-&gt;count++;</td></tr>
+<tr><td class="num" id="LN222">222</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN223">223</td><td class="line">	dp = diff_queue(<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, src, dst);</td></tr>
+<tr><td class="num" id="LN224">224</td><td class="line">	dp-&gt;renamed_pair = 1;</td></tr>
+<tr><td class="num" id="LN225">225</td><td class="line">	<span class='keyword'>if</span> (!strcmp(src-&gt;path, dst-&gt;path))</td></tr>
+<tr><td class="num" id="LN226">226</td><td class="line">		dp-&gt;score = rename_src[src_index].score;</td></tr>
+<tr><td class="num" id="LN227">227</td><td class="line">	<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN228">228</td><td class="line">		dp-&gt;score = score;</td></tr>
+<tr><td class="num" id="LN229">229</td><td class="line">	rename_dst[dst_index].pair = dp;</td></tr>
+<tr><td class="num" id="LN230">230</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN231">231</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN232">232</td><td class="line"><span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN233">233</td><td class="line"> <span class='comment'>* We sort the rename similarity matrix with the score, in descending</span></td></tr>
+<tr><td class="num" id="LN234">234</td><td class="line"> <span class='comment'>* order (the most similar first).</span></td></tr>
+<tr><td class="num" id="LN235">235</td><td class="line"> <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN236">236</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> score_compare(<span class='keyword'>const</span> <span class='keyword'>void</span> *a_, <span class='keyword'>const</span> <span class='keyword'>void</span> *b_)</td></tr>
+<tr><td class="num" id="LN237">237</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN238">238</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>struct</span> diff_score *a = a_, *b = b_;</td></tr>
+<tr><td class="num" id="LN239">239</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN240">240</td><td class="line">	<span class='comment'>/* sink the unused ones to the bottom */</span></td></tr>
+<tr><td class="num" id="LN241">241</td><td class="line">	<span class='keyword'>if</span> (a-&gt;dst &lt; 0)</td></tr>
+<tr><td class="num" id="LN242">242</td><td class="line">		<span class='keyword'>return</span> (0 &lt;= b-&gt;dst);</td></tr>
+<tr><td class="num" id="LN243">243</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (b-&gt;dst &lt; 0)</td></tr>
+<tr><td class="num" id="LN244">244</td><td class="line">		<span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN245">245</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN246">246</td><td class="line">	<span class='keyword'>if</span> (a-&gt;score == b-&gt;score)</td></tr>
+<tr><td class="num" id="LN247">247</td><td class="line">		<span class='keyword'>return</span> b-&gt;name_score - a-&gt;name_score;</td></tr>
+<tr><td class="num" id="LN248">248</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN249">249</td><td class="line">	<span class='keyword'>return</span> b-&gt;score - a-&gt;score;</td></tr>
+<tr><td class="num" id="LN250">250</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN251">251</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN252">252</td><td class="line"><span class='keyword'>struct</span> file_similarity {</td></tr>
+<tr><td class="num" id="LN253">253</td><td class="line">	<span class='keyword'>struct</span> hashmap_entry entry;</td></tr>
+<tr><td class="num" id="LN254">254</td><td class="line">	<span class='keyword'>int</span> index;</td></tr>
+<tr><td class="num" id="LN255">255</td><td class="line">	<span class='keyword'>struct</span> diff_filespec *filespec;</td></tr>
+<tr><td class="num" id="LN256">256</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN257">257</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN258">258</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>unsigned</span> <span class='keyword'>int</span> hash_filespec(<span class='keyword'>struct</span> diff_filespec *filespec)</td></tr>
+<tr><td class="num" id="LN259">259</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN260">260</td><td class="line">	<span class='keyword'>if</span> (!filespec-&gt;oid_valid) {</td></tr>
+<tr><td class="num" id="LN261">261</td><td class="line">		<span class='keyword'>if</span> (diff_populate_filespec(filespec, 0))</td></tr>
+<tr><td class="num" id="LN262">262</td><td class="line">			<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN263">263</td><td class="line">		hash_sha1_file(filespec-&gt;data, filespec-&gt;size, <span class='string_literal'>"blob"</span>,</td></tr>
+<tr><td class="num" id="LN264">264</td><td class="line">			       filespec-&gt;oid.hash);</td></tr>
+<tr><td class="num" id="LN265">265</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN266">266</td><td class="line">	<span class='keyword'>return</span> sha1hash(filespec-&gt;oid.hash);</td></tr>
+<tr><td class="num" id="LN267">267</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN268">268</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN269">269</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> find_identical_files(<span class='keyword'>struct</span> hashmap *srcs,</td></tr>
+<tr><td class="num" id="LN270">270</td><td class="line">				<span class='keyword'>int</span> dst_index,</td></tr>
+<tr><td class="num" id="LN271">271</td><td class="line">				<span class='keyword'>struct</span> diff_options *options)</td></tr>
+<tr><td class="num" id="LN272">272</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN273">273</td><td class="line">	<span class='keyword'>int</span> renames = 0;</td></tr>
+<tr><td class="num" id="LN274">274</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN275">275</td><td class="line">	<span class='keyword'>struct</span> diff_filespec *target = rename_dst[dst_index].two;</td></tr>
+<tr><td class="num" id="LN276">276</td><td class="line">	<span class='keyword'>struct</span> file_similarity *p, *best = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN277">277</td><td class="line">	<span class='keyword'>int</span> i = 100, best_score = -1;</td></tr>
+<tr><td class="num" id="LN278">278</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN279">279</td><td class="line">	<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN280">280</td><td class="line">	 <span class='comment'>* Find the best source match for specified destination.</span></td></tr>
+<tr><td class="num" id="LN281">281</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN282">282</td><td class="line">	p = hashmap_get_from_hash(srcs, hash_filespec(target), <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>);</td></tr>
+<tr><td class="num" id="LN283">283</td><td class="line">	<span class='keyword'>for</span> (; p; p = hashmap_get_next(srcs, p)) {</td></tr>
+<tr><td class="num" id="LN284">284</td><td class="line">		<span class='keyword'>int</span> score;</td></tr>
+<tr><td class="num" id="LN285">285</td><td class="line">		<span class='keyword'>struct</span> diff_filespec *source = p-&gt;filespec;</td></tr>
+<tr><td class="num" id="LN286">286</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN287">287</td><td class="line">		<span class='comment'>/* False hash collision? */</span></td></tr>
+<tr><td class="num" id="LN288">288</td><td class="line">		<span class='keyword'>if</span> (oidcmp(&amp;source-&gt;oid, &amp;target-&gt;oid))</td></tr>
+<tr><td class="num" id="LN289">289</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN290">290</td><td class="line">		<span class='comment'>/* Non-regular files? If so, the modes must match! */</span></td></tr>
+<tr><td class="num" id="LN291">291</td><td class="line">		<span class='keyword'>if</span> (!<span class='macro'>S_ISREG(source-&gt;mode)<span class='expansion'>(((source-&gt;mode) &amp; 0170000) == 0100000)</span></span> || !<span class='macro'>S_ISREG(target-&gt;mode)<span class='expansion'>(((target-&gt;mode) &amp; 0170000) == 0100000)</span></span>) {</td></tr>
+<tr><td class="num" id="LN292">292</td><td class="line">			<span class='keyword'>if</span> (source-&gt;mode != target-&gt;mode)</td></tr>
+<tr><td class="num" id="LN293">293</td><td class="line">				<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN294">294</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN295">295</td><td class="line">		<span class='comment'>/* Give higher scores to sources that haven't been used already */</span></td></tr>
+<tr><td class="num" id="LN296">296</td><td class="line">		score = !source-&gt;rename_used;</td></tr>
+<tr><td class="num" id="LN297">297</td><td class="line">		<span class='keyword'>if</span> (source-&gt;rename_used &amp;&amp; options-&gt;detect_rename != <span class='macro'>DIFF_DETECT_COPY<span class='expansion'>2</span></span>)</td></tr>
+<tr><td class="num" id="LN298">298</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN299">299</td><td class="line">		score += basename_same(source, target);</td></tr>
+<tr><td class="num" id="LN300">300</td><td class="line">		<span class='keyword'>if</span> (score &gt; best_score) {</td></tr>
+<tr><td class="num" id="LN301">301</td><td class="line">			best = p;</td></tr>
+<tr><td class="num" id="LN302">302</td><td class="line">			best_score = score;</td></tr>
+<tr><td class="num" id="LN303">303</td><td class="line">			<span class='keyword'>if</span> (score == 2)</td></tr>
+<tr><td class="num" id="LN304">304</td><td class="line">				<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN305">305</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN306">306</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN307">307</td><td class="line">		<span class='comment'>/* Too many identical alternatives? Pick one */</span></td></tr>
+<tr><td class="num" id="LN308">308</td><td class="line">		<span class='keyword'>if</span> (!--i)</td></tr>
+<tr><td class="num" id="LN309">309</td><td class="line">			<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN310">310</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN311">311</td><td class="line">	<span class='keyword'>if</span> (best) {</td></tr>
+<tr><td class="num" id="LN312">312</td><td class="line">		record_rename_pair(dst_index, best-&gt;index, <span class='macro'>MAX_SCORE<span class='expansion'>60000.0</span></span>);</td></tr>
+<tr><td class="num" id="LN313">313</td><td class="line">		renames++;</td></tr>
+<tr><td class="num" id="LN314">314</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN315">315</td><td class="line">	<span class='keyword'>return</span> renames;</td></tr>
+<tr><td class="num" id="LN316">316</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN317">317</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN318">318</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> insert_file_table(<span class='keyword'>struct</span> hashmap *table, <span class='keyword'>int</span> index, <span class='keyword'>struct</span> diff_filespec *filespec)</td></tr>
+<tr><td class="num" id="LN319">319</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN320">320</td><td class="line">	<span class='keyword'>struct</span> file_similarity *entry = xmalloc(<span class='keyword'>sizeof</span>(*entry));</td></tr>
+<tr><td class="num" id="LN321">321</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN322">322</td><td class="line">	entry-&gt;index = index;</td></tr>
+<tr><td class="num" id="LN323">323</td><td class="line">	entry-&gt;filespec = filespec;</td></tr>
+<tr><td class="num" id="LN324">324</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN325">325</td><td class="line">	hashmap_entry_init(entry, hash_filespec(filespec));</td></tr>
+<tr><td class="num" id="LN326">326</td><td class="line">	hashmap_add(table, entry);</td></tr>
+<tr><td class="num" id="LN327">327</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN328">328</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN329">329</td><td class="line"><span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN330">330</td><td class="line"> <span class='comment'>* Find exact renames first.</span></td></tr>
+<tr><td class="num" id="LN331">331</td><td class="line"> <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN332">332</td><td class="line"> <span class='comment'>* The first round matches up the up-to-date entries,</span></td></tr>
+<tr><td class="num" id="LN333">333</td><td class="line"> <span class='comment'>* and then during the second round we try to match</span></td></tr>
+<tr><td class="num" id="LN334">334</td><td class="line"> <span class='comment'>* cache-dirty entries as well.</span></td></tr>
+<tr><td class="num" id="LN335">335</td><td class="line"> <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN336">336</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> find_exact_renames(<span class='keyword'>struct</span> diff_options *options)</td></tr>
+<tr><td class="num" id="LN337">337</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN338">338</td><td class="line">	<span class='keyword'>int</span> i, renames = 0;</td></tr>
+<tr><td class="num" id="LN339">339</td><td class="line">	<span class='keyword'>struct</span> hashmap file_table;</td></tr>
+<tr><td class="num" id="LN340">340</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN341">341</td><td class="line">	<span class='comment'>/* Add all sources to the hash table in reverse order, because</span></td></tr>
+<tr><td class="num" id="LN342">342</td><td class="line">	 <span class='comment'>* later on they will be retrieved in LIFO order.</span></td></tr>
+<tr><td class="num" id="LN343">343</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN344">344</td><td class="line">	hashmap_init(&amp;file_table, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, rename_src_nr);</td></tr>
+<tr><td class="num" id="LN345">345</td><td class="line">	<span class='keyword'>for</span> (i = rename_src_nr-1; i &gt;= 0; i--)</td></tr>
+<tr><td class="num" id="LN346">346</td><td class="line">		insert_file_table(&amp;file_table, i, rename_src[i].p-&gt;one);</td></tr>
+<tr><td class="num" id="LN347">347</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN348">348</td><td class="line">	<span class='comment'>/* Walk the destinations and find best source match */</span></td></tr>
+<tr><td class="num" id="LN349">349</td><td class="line">	<span class='keyword'>for</span> (i = 0; i &lt; rename_dst_nr; i++)</td></tr>
+<tr><td class="num" id="LN350">350</td><td class="line">		renames += find_identical_files(&amp;file_table, i, options);</td></tr>
+<tr><td class="num" id="LN351">351</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN352">352</td><td class="line">	<span class='comment'>/* Free the hash data structure and entries */</span></td></tr>
+<tr><td class="num" id="LN353">353</td><td class="line">	hashmap_free(&amp;file_table, 1);</td></tr>
+<tr><td class="num" id="LN354">354</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN355">355</td><td class="line">	<span class='keyword'>return</span> renames;</td></tr>
+<tr><td class="num" id="LN356">356</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN357">357</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN358">358</td><td class="line"><span class='directive'>#define <span class='macro'>NUM_CANDIDATE_PER_DST<span class='expansion'>4</span></span> 4</span></td></tr>
+<tr><td class="num" id="LN359">359</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> record_if_better(<span class='keyword'>struct</span> diff_score m[], <span class='keyword'>struct</span> diff_score *o)</td></tr>
+<tr><td class="num" id="LN360">360</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN361">361</td><td class="line">	<span class='keyword'>int</span> i, worst;</td></tr>
+<tr><td class="num" id="LN362">362</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN363">363</td><td class="line">	<span class='comment'>/* find the worst one */</span></td></tr>
+<tr><td class="num" id="LN364">364</td><td class="line">	worst = 0;</td></tr>
+<tr><td class="num" id="LN365">365</td><td class="line">	<span class='keyword'>for</span> (i = 1; i &lt; <span class='macro'>NUM_CANDIDATE_PER_DST<span class='expansion'>4</span></span>; i++)</td></tr>
+<tr><td class="num" id="LN366">366</td><td class="line">		<span class='keyword'>if</span> (score_compare(&amp;m[i], &amp;m[worst]) &gt; 0)</td></tr>
+<tr><td class="num" id="LN367">367</td><td class="line">			worst = i;</td></tr>
+<tr><td class="num" id="LN368">368</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN369">369</td><td class="line">	<span class='comment'>/* is it better than the worst one? */</span></td></tr>
+<tr><td class="num" id="LN370">370</td><td class="line">	<span class='keyword'>if</span> (score_compare(&amp;m[worst], o) &gt; 0)</td></tr>
+<tr><td class="num" id="LN371">371</td><td class="line">		m[worst] = *o;</td></tr>
+<tr><td class="num" id="LN372">372</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN373">373</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN374">374</td><td class="line"><span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN375">375</td><td class="line"> <span class='comment'>* Returns:</span></td></tr>
+<tr><td class="num" id="LN376">376</td><td class="line"> <span class='comment'>* 0 if we are under the limit;</span></td></tr>
+<tr><td class="num" id="LN377">377</td><td class="line"> <span class='comment'>* 1 if we need to disable inexact rename detection;</span></td></tr>
+<tr><td class="num" id="LN378">378</td><td class="line"> <span class='comment'>* 2 if we would be under the limit if we were given -C instead of -C -C.</span></td></tr>
+<tr><td class="num" id="LN379">379</td><td class="line"> <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN380">380</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> too_many_rename_candidates(<span class='keyword'>int</span> num_create,</td></tr>
+<tr><td class="num" id="LN381">381</td><td class="line">				      <span class='keyword'>struct</span> diff_options *options)</td></tr>
+<tr><td class="num" id="LN382">382</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN383">383</td><td class="line">	<span class='keyword'>int</span> rename_limit = options-&gt;rename_limit;</td></tr>
+<tr><td class="num" id="LN384">384</td><td class="line">	<span class='keyword'>int</span> num_src = rename_src_nr;</td></tr>
+<tr><td class="num" id="LN385">385</td><td class="line">	<span class='keyword'>int</span> i;</td></tr>
+<tr><td class="num" id="LN386">386</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN387">387</td><td class="line">	options-&gt;needed_rename_limit = 0;</td></tr>
+<tr><td class="num" id="LN388">388</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN389">389</td><td class="line">	<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN390">390</td><td class="line">	 <span class='comment'>* This basically does a test for the rename matrix not</span></td></tr>
+<tr><td class="num" id="LN391">391</td><td class="line">	 <span class='comment'>* growing larger than a "rename_limit" square matrix, ie:</span></td></tr>
+<tr><td class="num" id="LN392">392</td><td class="line">	 <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN393">393</td><td class="line">	 <span class='comment'>*    num_create * num_src &gt; rename_limit * rename_limit</span></td></tr>
+<tr><td class="num" id="LN394">394</td><td class="line">	 <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN395">395</td><td class="line">	 <span class='comment'>* but handles the potential overflow case specially (and we</span></td></tr>
+<tr><td class="num" id="LN396">396</td><td class="line">	 <span class='comment'>* assume at least 32-bit integers)</span></td></tr>
+<tr><td class="num" id="LN397">397</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN398">398</td><td class="line">	<span class='keyword'>if</span> (rename_limit &lt;= 0 || rename_limit &gt; 32767)</td></tr>
+<tr><td class="num" id="LN399">399</td><td class="line">		rename_limit = 32767;</td></tr>
+<tr><td class="num" id="LN400">400</td><td class="line">	<span class='keyword'>if</span> ((num_create &lt;= rename_limit || num_src &lt;= rename_limit) &amp;&amp;</td></tr>
+<tr><td class="num" id="LN401">401</td><td class="line">	    (num_create * num_src &lt;= rename_limit * rename_limit))</td></tr>
+<tr><td class="num" id="LN402">402</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN403">403</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN404">404</td><td class="line">	options-&gt;needed_rename_limit =</td></tr>
+<tr><td class="num" id="LN405">405</td><td class="line">		num_src &gt; num_create ? num_src : num_create;</td></tr>
+<tr><td class="num" id="LN406">406</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN407">407</td><td class="line">	<span class='comment'>/* Are we running under -C -C? */</span></td></tr>
+<tr><td class="num" id="LN408">408</td><td class="line">	<span class='keyword'>if</span> (!<span class='macro'>DIFF_OPT_TST(options, FIND_COPIES_HARDER)<span class='expansion'>((options)-&gt;flags &amp; (1 &lt;&lt; 6))</span></span>)</td></tr>
+<tr><td class="num" id="LN409">409</td><td class="line">		<span class='keyword'>return</span> 1;</td></tr>
+<tr><td class="num" id="LN410">410</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN411">411</td><td class="line">	<span class='comment'>/* Would we bust the limit if we were running under -C? */</span></td></tr>
+<tr><td class="num" id="LN412">412</td><td class="line">	<span class='keyword'>for</span> (num_src = i = 0; i &lt; rename_src_nr; i++) {</td></tr>
+<tr><td class="num" id="LN413">413</td><td class="line">		<span class='keyword'>if</span> (diff_unmodified_pair(rename_src[i].p))</td></tr>
+<tr><td class="num" id="LN414">414</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN415">415</td><td class="line">		num_src++;</td></tr>
+<tr><td class="num" id="LN416">416</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN417">417</td><td class="line">	<span class='keyword'>if</span> ((num_create &lt;= rename_limit || num_src &lt;= rename_limit) &amp;&amp;</td></tr>
+<tr><td class="num" id="LN418">418</td><td class="line">	    (num_create * num_src &lt;= rename_limit * rename_limit))</td></tr>
+<tr><td class="num" id="LN419">419</td><td class="line">		<span class='keyword'>return</span> 2;</td></tr>
+<tr><td class="num" id="LN420">420</td><td class="line">	<span class='keyword'>return</span> 1;</td></tr>
+<tr><td class="num" id="LN421">421</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN422">422</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN423">423</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> find_renames(<span class='keyword'>struct</span> diff_score *mx, <span class='keyword'>int</span> dst_cnt, <span class='keyword'>int</span> minimum_score, <span class='keyword'>int</span> copies)</td></tr>
+<tr><td class="num" id="LN424">424</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN425">425</td><td class="line">	<span class='keyword'>int</span> count = 0, i;</td></tr>
+<tr><td class="num" id="LN426">426</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN427">427</td><td class="line">	<span class='keyword'>for</span> (i = 0; i &lt; dst_cnt * <span class='macro'>NUM_CANDIDATE_PER_DST<span class='expansion'>4</span></span>; i++) {</td></tr>
+<tr><td class="num" id="LN428">428</td><td class="line">		<span class='keyword'>struct</span> diff_rename_dst *dst;</td></tr>
+<tr><td class="num" id="LN429">429</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN430">430</td><td class="line">		<span class='keyword'>if</span> ((mx[i].dst &lt; 0) ||</td></tr>
+<tr><td class="num" id="LN431">431</td><td class="line">		    (mx[i].score &lt; minimum_score))</td></tr>
+<tr><td class="num" id="LN432">432</td><td class="line">			<span class='keyword'>break</span>; <span class='comment'>/* there is no more usable pair. */</span></td></tr>
+<tr><td class="num" id="LN433">433</td><td class="line">		dst = &amp;rename_dst[mx[i].dst];</td></tr>
+<tr><td class="num" id="LN434">434</td><td class="line">		<span class='keyword'>if</span> (dst-&gt;pair)</td></tr>
+<tr><td class="num" id="LN435">435</td><td class="line">			<span class='keyword'>continue</span>; <span class='comment'>/* already done, either exact or fuzzy. */</span></td></tr>
+<tr><td class="num" id="LN436">436</td><td class="line">		<span class='keyword'>if</span> (!copies &amp;&amp; rename_src[mx[i].src].p-&gt;one-&gt;rename_used)</td></tr>
+<tr><td class="num" id="LN437">437</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN438">438</td><td class="line">		record_rename_pair(mx[i].dst, mx[i].src, mx[i].score);</td></tr>
+<tr><td class="num" id="LN439">439</td><td class="line">		count++;</td></tr>
+<tr><td class="num" id="LN440">440</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN441">441</td><td class="line">	<span class='keyword'>return</span> count;</td></tr>
+<tr><td class="num" id="LN442">442</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN443">443</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN444">444</td><td class="line"><span class='keyword'>void</span> diffcore_rename(<span class='keyword'>struct</span> diff_options *options)</td></tr>
+<tr><td class="num" id="LN445">445</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN446">446</td><td class="line">	<span class='keyword'>int</span> detect_rename = options-&gt;detect_rename;</td></tr>
+<tr><td class="num" id="LN447">447</td><td class="line">	<span class='keyword'>int</span> minimum_score = options-&gt;rename_score;</td></tr>
+<tr><td class="num" id="LN448">448</td><td class="line">	<span class='keyword'>struct</span> diff_queue_struct *q = &amp;diff_queued_diff;</td></tr>
+<tr><td class="num" id="LN449">449</td><td class="line">	<span class='keyword'>struct</span> diff_queue_struct outq;</td></tr>
+<tr><td class="num" id="LN450">450</td><td class="line">	<span class='keyword'>struct</span> diff_score *mx;</td></tr>
+<tr><td class="num" id="LN451">451</td><td class="line">	<span class='keyword'>int</span> i, j, rename_count, skip_unmodified = 0;</td></tr>
+<tr><td class="num" id="LN452">452</td><td class="line">	<span class='keyword'>int</span> num_create, dst_cnt;</td></tr>
+<tr><td class="num" id="LN453">453</td><td class="line">	<span class='keyword'>struct</span> progress *progress = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN454">454</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN455">455</td><td class="line">	<span class='keyword'>if</span> (!minimum_score)</td></tr>
+<tr><td class="num" id="LN456">456</td><td class="line">		minimum_score = <span class='macro'>DEFAULT_RENAME_SCORE<span class='expansion'>30000</span></span>;</td></tr>
+<tr><td class="num" id="LN457">457</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN458">458</td><td class="line">	<span class='keyword'>for</span> (i = 0; i &lt; q-&gt;nr; i++) {</td></tr>
+<tr><td class="num" id="LN459">459</td><td class="line">		<span class='keyword'>struct</span> diff_filepair *p = q-&gt;queue[i];</td></tr>
+<tr><td class="num" id="LN460">460</td><td class="line">		<span class='keyword'>if</span> (!<span class='macro'>DIFF_FILE_VALID(p-&gt;one)<span class='expansion'>(((p-&gt;one)-&gt;mode) != 0)</span></span>) {</td></tr>
+<tr><td class="num" id="LN461">461</td><td class="line">			<span class='keyword'>if</span> (!<span class='macro'>DIFF_FILE_VALID(p-&gt;two)<span class='expansion'>(((p-&gt;two)-&gt;mode) != 0)</span></span>)</td></tr>
+<tr><td class="num" id="LN462">462</td><td class="line">				<span class='keyword'>continue</span>; <span class='comment'>/* unmerged */</span></td></tr>
+<tr><td class="num" id="LN463">463</td><td class="line">			<span class='keyword'>else</span> <span class='keyword'>if</span> (options-&gt;single_follow &amp;&amp;</td></tr>
+<tr><td class="num" id="LN464">464</td><td class="line">				 strcmp(options-&gt;single_follow, p-&gt;two-&gt;path))</td></tr>
+<tr><td class="num" id="LN465">465</td><td class="line">				<span class='keyword'>continue</span>; <span class='comment'>/* not interested */</span></td></tr>
+<tr><td class="num" id="LN466">466</td><td class="line">			<span class='keyword'>else</span> <span class='keyword'>if</span> (!<span class='macro'>DIFF_OPT_TST(options, RENAME_EMPTY)<span class='expansion'>((options)-&gt;flags &amp; (1 &lt;&lt; 8))</span></span> &amp;&amp;</td></tr>
+<tr><td class="num" id="LN467">467</td><td class="line">				 is_empty_blob_sha1(p-&gt;two-&gt;oid.hash))</td></tr>
+<tr><td class="num" id="LN468">468</td><td class="line">				<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN469">469</td><td class="line">			<span class='keyword'>else</span> <span class='keyword'>if</span> (add_rename_dst(p-&gt;two) &lt; 0) {</td></tr>
+<tr><td class="num" id="LN470">470</td><td class="line">				warning(<span class='string_literal'>"skipping rename detection, detected"</span></td></tr>
+<tr><td class="num" id="LN471">471</td><td class="line">					<span class='string_literal'>" duplicate destination '%s'"</span>,</td></tr>
+<tr><td class="num" id="LN472">472</td><td class="line">					p-&gt;two-&gt;path);</td></tr>
+<tr><td class="num" id="LN473">473</td><td class="line">				<span class='keyword'>goto</span> cleanup;</td></tr>
+<tr><td class="num" id="LN474">474</td><td class="line">			}</td></tr>
+<tr><td class="num" id="LN475">475</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN476">476</td><td class="line">		<span class='keyword'>else</span> <span class='keyword'>if</span> (!<span class='macro'>DIFF_OPT_TST(options, RENAME_EMPTY)<span class='expansion'>((options)-&gt;flags &amp; (1 &lt;&lt; 8))</span></span> &amp;&amp;</td></tr>
+<tr><td class="num" id="LN477">477</td><td class="line">			 is_empty_blob_sha1(p-&gt;one-&gt;oid.hash))</td></tr>
+<tr><td class="num" id="LN478">478</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN479">479</td><td class="line">		<span class='keyword'>else</span> <span class='keyword'>if</span> (!<span class='macro'>DIFF_PAIR_UNMERGED(p)<span class='expansion'>((p)-&gt;is_unmerged)</span></span> &amp;&amp; !<span class='macro'>DIFF_FILE_VALID(p-&gt;two)<span class='expansion'>(((p-&gt;two)-&gt;mode) != 0)</span></span>) {</td></tr>
+<tr><td class="num" id="LN480">480</td><td class="line">			<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN481">481</td><td class="line">			 <span class='comment'>* If the source is a broken "delete", and</span></td></tr>
+<tr><td class="num" id="LN482">482</td><td class="line">			 <span class='comment'>* they did not really want to get broken,</span></td></tr>
+<tr><td class="num" id="LN483">483</td><td class="line">			 <span class='comment'>* that means the source actually stays.</span></td></tr>
+<tr><td class="num" id="LN484">484</td><td class="line">			 <span class='comment'>* So we increment the "rename_used" score</span></td></tr>
+<tr><td class="num" id="LN485">485</td><td class="line">			 <span class='comment'>* by one, to indicate ourselves as a user</span></td></tr>
+<tr><td class="num" id="LN486">486</td><td class="line">			 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN487">487</td><td class="line">			<span class='keyword'>if</span> (p-&gt;broken_pair &amp;&amp; !p-&gt;score)</td></tr>
+<tr><td class="num" id="LN488">488</td><td class="line">				p-&gt;one-&gt;rename_used++;</td></tr>
+<tr><td class="num" id="LN489">489</td><td class="line">			register_rename_src(p);</td></tr>
+<tr><td class="num" id="LN490">490</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN491">491</td><td class="line">		<span class='keyword'>else</span> <span class='keyword'>if</span> (detect_rename == <span class='macro'>DIFF_DETECT_COPY<span class='expansion'>2</span></span>) {</td></tr>
+<tr><td class="num" id="LN492">492</td><td class="line">			<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN493">493</td><td class="line">			 <span class='comment'>* Increment the "rename_used" score by</span></td></tr>
+<tr><td class="num" id="LN494">494</td><td class="line">			 <span class='comment'>* one, to indicate ourselves as a user.</span></td></tr>
+<tr><td class="num" id="LN495">495</td><td class="line">			 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN496">496</td><td class="line">			p-&gt;one-&gt;rename_used++;</td></tr>
+<tr><td class="num" id="LN497">497</td><td class="line">			register_rename_src(p);</td></tr>
+<tr><td class="num" id="LN498">498</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN499">499</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN500">500</td><td class="line">	<span class='keyword'>if</span> (rename_dst_nr == 0 || rename_src_nr == 0)</td></tr>
+<tr><td class="num" id="LN501">501</td><td class="line">		<span class='keyword'>goto</span> cleanup; <span class='comment'>/* nothing to do */</span></td></tr>
+<tr><td class="num" id="LN502">502</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN503">503</td><td class="line">	<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN504">504</td><td class="line">	 <span class='comment'>* We really want to cull the candidates list early</span></td></tr>
+<tr><td class="num" id="LN505">505</td><td class="line">	 <span class='comment'>* with cheap tests in order to avoid doing deltas.</span></td></tr>
+<tr><td class="num" id="LN506">506</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN507">507</td><td class="line">	rename_count = find_exact_renames(options);</td></tr>
+<tr><td class="num" id="LN508">508</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN509">509</td><td class="line">	<span class='comment'>/* Did we only want exact renames? */</span></td></tr>
+<tr><td class="num" id="LN510">510</td><td class="line">	<span class='keyword'>if</span> (minimum_score == <span class='macro'>MAX_SCORE<span class='expansion'>60000.0</span></span>)</td></tr>
+<tr><td class="num" id="LN511">511</td><td class="line">		<span class='keyword'>goto</span> cleanup;</td></tr>
+<tr><td class="num" id="LN512">512</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN513">513</td><td class="line">	<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN514">514</td><td class="line">	 <span class='comment'>* Calculate how many renames are left (but all the source</span></td></tr>
+<tr><td class="num" id="LN515">515</td><td class="line">	 <span class='comment'>* files still remain as options for rename/copies!)</span></td></tr>
+<tr><td class="num" id="LN516">516</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN517">517</td><td class="line">	num_create = (rename_dst_nr - rename_count);</td></tr>
+<tr><td class="num" id="LN518">518</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN519">519</td><td class="line">	<span class='comment'>/* All done? */</span></td></tr>
+<tr><td class="num" id="LN520">520</td><td class="line">	<span class='keyword'>if</span> (!num_create)</td></tr>
+<tr><td class="num" id="LN521">521</td><td class="line">		<span class='keyword'>goto</span> cleanup;</td></tr>
+<tr><td class="num" id="LN522">522</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN523">523</td><td class="line">	<span class='keyword'>switch</span> (too_many_rename_candidates(num_create, options)) {</td></tr>
+<tr><td class="num" id="LN524">524</td><td class="line">	<span class='keyword'>case</span> 1:</td></tr>
+<tr><td class="num" id="LN525">525</td><td class="line">		<span class='keyword'>goto</span> cleanup;</td></tr>
+<tr><td class="num" id="LN526">526</td><td class="line">	<span class='keyword'>case</span> 2:</td></tr>
+<tr><td class="num" id="LN527">527</td><td class="line">		options-&gt;degraded_cc_to_c = 1;</td></tr>
+<tr><td class="num" id="LN528">528</td><td class="line">		skip_unmodified = 1;</td></tr>
+<tr><td class="num" id="LN529">529</td><td class="line">		<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN530">530</td><td class="line">	<span class='keyword'>default</span>:</td></tr>
+<tr><td class="num" id="LN531">531</td><td class="line">		<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN532">532</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN533">533</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN534">534</td><td class="line">	<span class='keyword'>if</span> (options-&gt;show_rename_progress) {</td></tr>
+<tr><td class="num" id="LN535">535</td><td class="line">		progress = start_progress_delay(</td></tr>
+<tr><td class="num" id="LN536">536</td><td class="line">				_(<span class='string_literal'>"Performing inexact rename detection"</span>),</td></tr>
+<tr><td class="num" id="LN537">537</td><td class="line">				rename_dst_nr * rename_src_nr, 50, 1);</td></tr>
+<tr><td class="num" id="LN538">538</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN539">539</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN540">540</td><td class="line">	mx = xcalloc(st_mult(<span class='macro'>NUM_CANDIDATE_PER_DST<span class='expansion'>4</span></span>, num_create), <span class='keyword'>sizeof</span>(*mx));</td></tr>
+<tr><td class="num" id="LN541">541</td><td class="line">	<span class='keyword'>for</span> (dst_cnt = i = 0; i &lt; rename_dst_nr; i++) {</td></tr>
+<tr><td class="num" id="LN542">542</td><td class="line">		<span class='keyword'>struct</span> diff_filespec *two = rename_dst[i].two;</td></tr>
+<tr><td class="num" id="LN543">543</td><td class="line">		<span class='keyword'>struct</span> diff_score *m;</td></tr>
+<tr><td class="num" id="LN544">544</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN545">545</td><td class="line">		<span class='keyword'>if</span> (rename_dst[i].pair)</td></tr>
+<tr><td class="num" id="LN546">546</td><td class="line">			<span class='keyword'>continue</span>; <span class='comment'>/* dealt with exact match already. */</span></td></tr>
+<tr><td class="num" id="LN547">547</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN548">548</td><td class="line">		m = &amp;mx[dst_cnt * <span class='macro'>NUM_CANDIDATE_PER_DST<span class='expansion'>4</span></span>];</td></tr>
+<tr><td class="num" id="LN549">549</td><td class="line">		<span class='keyword'>for</span> (j = 0; j &lt; <span class='macro'>NUM_CANDIDATE_PER_DST<span class='expansion'>4</span></span>; j++)</td></tr>
+<tr><td class="num" id="LN550">550</td><td class="line">			m[j].dst = -1;</td></tr>
+<tr><td class="num" id="LN551">551</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN552">552</td><td class="line">		<span class='keyword'>for</span> (j = 0; j &lt; rename_src_nr; j++) {</td></tr>
+<tr><td class="num" id="LN553">553</td><td class="line">			<span class='keyword'>struct</span> diff_filespec *one = rename_src[j].p-&gt;one;</td></tr>
+<tr><td class="num" id="LN554">554</td><td class="line">			<span class='keyword'>struct</span> diff_score this_src;</td></tr>
+<tr><td class="num" id="LN555">555</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN556">556</td><td class="line">			<span class='keyword'>if</span> (skip_unmodified &amp;&amp;</td></tr>
+<tr><td class="num" id="LN557">557</td><td class="line">			    diff_unmodified_pair(rename_src[j].p))</td></tr>
+<tr><td class="num" id="LN558">558</td><td class="line">				<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN559">559</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN560">560</td><td class="line">			this_src.score = estimate_similarity(one, two,</td></tr>
+<tr><td class="num" id="LN561">561</td><td class="line">							     minimum_score);</td></tr>
+<tr><td class="num" id="LN562">562</td><td class="line">			this_src.name_score = basename_same(one, two);</td></tr>
+<tr><td class="num" id="LN563">563</td><td class="line">			this_src.dst = i;</td></tr>
+<tr><td class="num" id="LN564">564</td><td class="line">			this_src.src = j;</td></tr>
+<tr><td class="num" id="LN565">565</td><td class="line">			record_if_better(m, &amp;this_src);</td></tr>
+<tr><td class="num" id="LN566">566</td><td class="line">			<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN567">567</td><td class="line">			 <span class='comment'>* Once we run estimate_similarity,</span></td></tr>
+<tr><td class="num" id="LN568">568</td><td class="line">			 <span class='comment'>* We do not need the text anymore.</span></td></tr>
+<tr><td class="num" id="LN569">569</td><td class="line">			 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN570">570</td><td class="line">			diff_free_filespec_blob(one);</td></tr>
+<tr><td class="num" id="LN571">571</td><td class="line">			diff_free_filespec_blob(two);</td></tr>
+<tr><td class="num" id="LN572">572</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN573">573</td><td class="line">		dst_cnt++;</td></tr>
+<tr><td class="num" id="LN574">574</td><td class="line">		display_progress(progress, (i+1)*rename_src_nr);</td></tr>
+<tr><td class="num" id="LN575">575</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN576">576</td><td class="line">	stop_progress(&amp;progress);</td></tr>
+<tr><td class="num" id="LN577">577</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN578">578</td><td class="line">	<span class='comment'>/* cost matrix sorted by most to least similar pair */</span></td></tr>
+<tr><td class="num" id="LN579">579</td><td class="line">	<span class='macro'>QSORT(mx, dst_cnt * NUM_CANDIDATE_PER_DST, score_compare)<span class='expansion'>sane_qsort((mx), (dst_cnt * 4), sizeof(*(mx)), score_compare)</span></span>;</td></tr>
+<tr><td class="num" id="LN580">580</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN581">581</td><td class="line">	rename_count += find_renames(mx, dst_cnt, minimum_score, 0);</td></tr>
+<tr><td class="num" id="LN582">582</td><td class="line">	<span class='keyword'>if</span> (detect_rename == <span class='macro'>DIFF_DETECT_COPY<span class='expansion'>2</span></span>)</td></tr>
+<tr><td class="num" id="LN583">583</td><td class="line">		rename_count += <span class="mrange">find_renames(mx, dst_cnt, minimum_score, 1)</span>;</td></tr>
+<tr><td class="num"></td><td class="line"><div id="EndPath" class="msg msgEvent" style="margin-left:17ex">Value stored to 'rename_count' is never read</div></td></tr>
+<tr><td class="num" id="LN584">584</td><td class="line">	free(mx);</td></tr>
+<tr><td class="num" id="LN585">585</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN586">586</td><td class="line"> cleanup:</td></tr>
+<tr><td class="num" id="LN587">587</td><td class="line">	<span class='comment'>/* At this point, we have found some renames and copies and they</span></td></tr>
+<tr><td class="num" id="LN588">588</td><td class="line">	 <span class='comment'>* are recorded in rename_dst.  The original list is still in *q.</span></td></tr>
+<tr><td class="num" id="LN589">589</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN590">590</td><td class="line">	<span class='macro'>DIFF_QUEUE_CLEAR(&amp;outq)<span class='expansion'>do { (&amp;outq)-&gt;queue = ((void*)0); (&amp;outq)-&gt;nr =<br> (&amp;outq)-&gt;alloc = 0; } while (0)</span></span>;</td></tr>
+<tr><td class="num" id="LN591">591</td><td class="line">	<span class='keyword'>for</span> (i = 0; i &lt; q-&gt;nr; i++) {</td></tr>
+<tr><td class="num" id="LN592">592</td><td class="line">		<span class='keyword'>struct</span> diff_filepair *p = q-&gt;queue[i];</td></tr>
+<tr><td class="num" id="LN593">593</td><td class="line">		<span class='keyword'>struct</span> diff_filepair *pair_to_free = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN594">594</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN595">595</td><td class="line">		<span class='keyword'>if</span> (<span class='macro'>DIFF_PAIR_UNMERGED(p)<span class='expansion'>((p)-&gt;is_unmerged)</span></span>) {</td></tr>
+<tr><td class="num" id="LN596">596</td><td class="line">			diff_q(&amp;outq, p);</td></tr>
+<tr><td class="num" id="LN597">597</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN598">598</td><td class="line">		<span class='keyword'>else</span> <span class='keyword'>if</span> (!<span class='macro'>DIFF_FILE_VALID(p-&gt;one)<span class='expansion'>(((p-&gt;one)-&gt;mode) != 0)</span></span> &amp;&amp; <span class='macro'>DIFF_FILE_VALID(p-&gt;two)<span class='expansion'>(((p-&gt;two)-&gt;mode) != 0)</span></span>) {</td></tr>
+<tr><td class="num" id="LN599">599</td><td class="line">			<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN600">600</td><td class="line">			 <span class='comment'>* Creation</span></td></tr>
+<tr><td class="num" id="LN601">601</td><td class="line">			 <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN602">602</td><td class="line">			 <span class='comment'>* We would output this create record if it has</span></td></tr>
+<tr><td class="num" id="LN603">603</td><td class="line">			 <span class='comment'>* not been turned into a rename/copy already.</span></td></tr>
+<tr><td class="num" id="LN604">604</td><td class="line">			 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN605">605</td><td class="line">			<span class='keyword'>struct</span> diff_rename_dst *dst = locate_rename_dst(p-&gt;two);</td></tr>
+<tr><td class="num" id="LN606">606</td><td class="line">			<span class='keyword'>if</span> (dst &amp;&amp; dst-&gt;pair) {</td></tr>
+<tr><td class="num" id="LN607">607</td><td class="line">				diff_q(&amp;outq, dst-&gt;pair);</td></tr>
+<tr><td class="num" id="LN608">608</td><td class="line">				pair_to_free = p;</td></tr>
+<tr><td class="num" id="LN609">609</td><td class="line">			}</td></tr>
+<tr><td class="num" id="LN610">610</td><td class="line">			<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN611">611</td><td class="line">				<span class='comment'>/* no matching rename/copy source, so</span></td></tr>
+<tr><td class="num" id="LN612">612</td><td class="line">				 <span class='comment'>* record this as a creation.</span></td></tr>
+<tr><td class="num" id="LN613">613</td><td class="line">				 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN614">614</td><td class="line">				diff_q(&amp;outq, p);</td></tr>
+<tr><td class="num" id="LN615">615</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN616">616</td><td class="line">		<span class='keyword'>else</span> <span class='keyword'>if</span> (<span class='macro'>DIFF_FILE_VALID(p-&gt;one)<span class='expansion'>(((p-&gt;one)-&gt;mode) != 0)</span></span> &amp;&amp; !<span class='macro'>DIFF_FILE_VALID(p-&gt;two)<span class='expansion'>(((p-&gt;two)-&gt;mode) != 0)</span></span>) {</td></tr>
+<tr><td class="num" id="LN617">617</td><td class="line">			<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN618">618</td><td class="line">			 <span class='comment'>* Deletion</span></td></tr>
+<tr><td class="num" id="LN619">619</td><td class="line">			 <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN620">620</td><td class="line">			 <span class='comment'>* We would output this delete record if:</span></td></tr>
+<tr><td class="num" id="LN621">621</td><td class="line">			 <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN622">622</td><td class="line">			 <span class='comment'>* (1) this is a broken delete and the counterpart</span></td></tr>
+<tr><td class="num" id="LN623">623</td><td class="line">			 <span class='comment'>*     broken create remains in the output; or</span></td></tr>
+<tr><td class="num" id="LN624">624</td><td class="line">			 <span class='comment'>* (2) this is not a broken delete, and rename_dst</span></td></tr>
+<tr><td class="num" id="LN625">625</td><td class="line">			 <span class='comment'>*     does not have a rename/copy to move p-&gt;one-&gt;path</span></td></tr>
+<tr><td class="num" id="LN626">626</td><td class="line">			 <span class='comment'>*     out of existence.</span></td></tr>
+<tr><td class="num" id="LN627">627</td><td class="line">			 <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN628">628</td><td class="line">			 <span class='comment'>* Otherwise, the counterpart broken create</span></td></tr>
+<tr><td class="num" id="LN629">629</td><td class="line">			 <span class='comment'>* has been turned into a rename-edit; or</span></td></tr>
+<tr><td class="num" id="LN630">630</td><td class="line">			 <span class='comment'>* delete did not have a matching create to</span></td></tr>
+<tr><td class="num" id="LN631">631</td><td class="line">			 <span class='comment'>* begin with.</span></td></tr>
+<tr><td class="num" id="LN632">632</td><td class="line">			 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN633">633</td><td class="line">			<span class='keyword'>if</span> (<span class='macro'>DIFF_PAIR_BROKEN(p)<span class='expansion'>( (!((((p)-&gt;one)-&gt;mode) != 0) != !((((p)-&gt;two)-&gt;mode<br>) != 0)) &amp;&amp; ((p)-&gt;broken_pair != 0) )</span></span>) {</td></tr>
+<tr><td class="num" id="LN634">634</td><td class="line">				<span class='comment'>/* broken delete */</span></td></tr>
+<tr><td class="num" id="LN635">635</td><td class="line">				<span class='keyword'>struct</span> diff_rename_dst *dst = locate_rename_dst(p-&gt;one);</td></tr>
+<tr><td class="num" id="LN636">636</td><td class="line">				<span class='keyword'>if</span> (dst &amp;&amp; dst-&gt;pair)</td></tr>
+<tr><td class="num" id="LN637">637</td><td class="line">					<span class='comment'>/* counterpart is now rename/copy */</span></td></tr>
+<tr><td class="num" id="LN638">638</td><td class="line">					pair_to_free = p;</td></tr>
+<tr><td class="num" id="LN639">639</td><td class="line">			}</td></tr>
+<tr><td class="num" id="LN640">640</td><td class="line">			<span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN641">641</td><td class="line">				<span class='keyword'>if</span> (p-&gt;one-&gt;rename_used)</td></tr>
+<tr><td class="num" id="LN642">642</td><td class="line">					<span class='comment'>/* this path remains */</span></td></tr>
+<tr><td class="num" id="LN643">643</td><td class="line">					pair_to_free = p;</td></tr>
+<tr><td class="num" id="LN644">644</td><td class="line">			}</td></tr>
+<tr><td class="num" id="LN645">645</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN646">646</td><td class="line">			<span class='keyword'>if</span> (pair_to_free)</td></tr>
+<tr><td class="num" id="LN647">647</td><td class="line">				;</td></tr>
+<tr><td class="num" id="LN648">648</td><td class="line">			<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN649">649</td><td class="line">				diff_q(&amp;outq, p);</td></tr>
+<tr><td class="num" id="LN650">650</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN651">651</td><td class="line">		<span class='keyword'>else</span> <span class='keyword'>if</span> (!diff_unmodified_pair(p))</td></tr>
+<tr><td class="num" id="LN652">652</td><td class="line">			<span class='comment'>/* all the usual ones need to be kept */</span></td></tr>
+<tr><td class="num" id="LN653">653</td><td class="line">			diff_q(&amp;outq, p);</td></tr>
+<tr><td class="num" id="LN654">654</td><td class="line">		<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN655">655</td><td class="line">			<span class='comment'>/* no need to keep unmodified pairs */</span></td></tr>
+<tr><td class="num" id="LN656">656</td><td class="line">			pair_to_free = p;</td></tr>
+<tr><td class="num" id="LN657">657</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN658">658</td><td class="line">		<span class='keyword'>if</span> (pair_to_free)</td></tr>
+<tr><td class="num" id="LN659">659</td><td class="line">			diff_free_filepair(pair_to_free);</td></tr>
+<tr><td class="num" id="LN660">660</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN661">661</td><td class="line">	<span class='macro'>diff_debug_queue(<span class='string_literal'>"done copying original"</span>, &amp;outq)<span class='expansion'>do { } while (0)</span></span>;</td></tr>
+<tr><td class="num" id="LN662">662</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN663">663</td><td class="line">	free(q-&gt;queue);</td></tr>
+<tr><td class="num" id="LN664">664</td><td class="line">	*q = outq;</td></tr>
+<tr><td class="num" id="LN665">665</td><td class="line">	<span class='macro'>diff_debug_queue(<span class='string_literal'>"done collapsing"</span>, q)<span class='expansion'>do { } while (0)</span></span>;</td></tr>
+<tr><td class="num" id="LN666">666</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN667">667</td><td class="line">	<span class='keyword'>for</span> (i = 0; i &lt; rename_dst_nr; i++)</td></tr>
+<tr><td class="num" id="LN668">668</td><td class="line">		free_filespec(rename_dst[i].two);</td></tr>
+<tr><td class="num" id="LN669">669</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN670">670</td><td class="line">	free(rename_dst);</td></tr>
+<tr><td class="num" id="LN671">671</td><td class="line">	rename_dst = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN672">672</td><td class="line">	rename_dst_nr = rename_dst_alloc = 0;</td></tr>
+<tr><td class="num" id="LN673">673</td><td class="line">	free(rename_src);</td></tr>
+<tr><td class="num" id="LN674">674</td><td class="line">	rename_src = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN675">675</td><td class="line">	rename_src_nr = rename_src_alloc = 0;</td></tr>
+<tr><td class="num" id="LN676">676</td><td class="line">	<span class='keyword'>return</span>;</td></tr>
+<tr><td class="num" id="LN677">677</td><td class="line">}</td></tr>
+</table></body></html>

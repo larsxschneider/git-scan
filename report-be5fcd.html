@@ -1,0 +1,522 @@
+<!doctype html>
+<html>
+<head>
+<title>builtin/repack.c</title>
+<style type="text/css">
+ body { color:#000000; background-color:#ffffff }
+ body { font-family:Helvetica, sans-serif; font-size:10pt }
+ h1 { font-size:14pt }
+ .code { border-collapse:collapse; width:100%; }
+ .code { font-family: "Monospace", monospace; font-size:10pt }
+ .code { line-height: 1.2em }
+ .comment { color: green; font-style: oblique }
+ .keyword { color: blue }
+ .string_literal { color: red }
+ .directive { color: darkmagenta }
+ .expansion { display: none; }
+ .macro:hover .expansion { display: block; border: 2px solid #FF0000; padding: 2px; background-color:#FFF0F0; font-weight: normal;   -webkit-border-radius:5px;  -webkit-box-shadow:1px 1px 7px #000; position: absolute; top: -1em; left:10em; z-index: 1 } 
+ .macro { color: darkmagenta; background-color:LemonChiffon; position: relative }
+ .num { width:2.5em; padding-right:2ex; background-color:#eeeeee }
+ .num { text-align:right; font-size:8pt }
+ .num { color:#444444 }
+ .line { padding-left: 1ex; border-left: 3px solid #ccc }
+ .line { white-space: pre }
+ .msg { -webkit-box-shadow:1px 1px 7px #000 }
+ .msg { -webkit-border-radius:5px }
+ .msg { font-family:Helvetica, sans-serif; font-size:8pt }
+ .msg { float:left }
+ .msg { padding:0.25em 1ex 0.25em 1ex }
+ .msg { margin-top:10px; margin-bottom:10px }
+ .msg { font-weight:bold }
+ .msg { max-width:60em; word-wrap: break-word; white-space: pre-wrap }
+ .msgT { padding:0x; spacing:0x }
+ .msgEvent { background-color:#fff8b4; color:#000000 }
+ .msgControl { background-color:#bbbbbb; color:#000000 }
+ .mrange { background-color:#dfddf3 }
+ .mrange { border-bottom:1px solid #6F9DBE }
+ .PathIndex { font-weight: bold; padding:0px 5px; margin-right:5px; }
+ .PathIndex { -webkit-border-radius:8px }
+ .PathIndexEvent { background-color:#bfba87 }
+ .PathIndexControl { background-color:#8c8c8c }
+ .PathNav a { text-decoration:none; font-size: larger }
+ .CodeInsertionHint { font-weight: bold; background-color: #10dd10 }
+ .CodeRemovalHint { background-color:#de1010 }
+ .CodeRemovalHint { border-bottom:1px solid #6F9DBE }
+ table.simpletable {
+   padding: 5px;
+   font-size:12pt;
+   margin:20px;
+   border-collapse: collapse; border-spacing: 0px;
+ }
+ td.rowname {
+   text-align:right; font-weight:bold; color:#444444;
+   padding-right:2ex; }
+</style>
+</head>
+<body>
+<!-- BUGDESC Value stored to 'argc' is never read -->
+
+<!-- BUGTYPE Dead assignment -->
+
+<!-- BUGCATEGORY Dead store -->
+
+<!-- BUGFILE /Users/lars/Code/git/builtin/repack.c -->
+
+<!-- FILENAME repack.c -->
+
+<!-- FUNCTIONNAME cmd_repack -->
+
+<!-- ISSUEHASHCONTENTOFLINEINCONTEXT 3f00af6525655fd347eb9d67f1647674 -->
+
+<!-- BUGLINE 202 -->
+
+<!-- BUGCOLUMN 2 -->
+
+<!-- BUGPATHLENGTH 1 -->
+
+<!-- BUGMETAEND -->
+<!-- REPORTHEADER -->
+<h3>Bug Summary</h3>
+<table class="simpletable">
+<tr><td class="rowname">File:</td><td>builtin/repack.c</td></tr>
+<tr><td class="rowname">Location:</td><td><a href="#EndPath">line 202, column 2</a></td></tr>
+<tr><td class="rowname">Description:</td><td>Value stored to 'argc' is never read</td></tr>
+</table>
+<!-- REPORTSUMMARYEXTRA -->
+<h3>Annotated Source Code</h3>
+<table class="code">
+<tr><td class="num" id="LN1">1</td><td class="line"><span class='directive'>#include "builtin.h"</span></td></tr>
+<tr><td class="num" id="LN2">2</td><td class="line"><span class='directive'>#include "cache.h"</span></td></tr>
+<tr><td class="num" id="LN3">3</td><td class="line"><span class='directive'>#include "dir.h"</span></td></tr>
+<tr><td class="num" id="LN4">4</td><td class="line"><span class='directive'>#include "parse-options.h"</span></td></tr>
+<tr><td class="num" id="LN5">5</td><td class="line"><span class='directive'>#include "run-command.h"</span></td></tr>
+<tr><td class="num" id="LN6">6</td><td class="line"><span class='directive'>#include "sigchain.h"</span></td></tr>
+<tr><td class="num" id="LN7">7</td><td class="line"><span class='directive'>#include "strbuf.h"</span></td></tr>
+<tr><td class="num" id="LN8">8</td><td class="line"><span class='directive'>#include "string-list.h"</span></td></tr>
+<tr><td class="num" id="LN9">9</td><td class="line"><span class='directive'>#include "argv-array.h"</span></td></tr>
+<tr><td class="num" id="LN10">10</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN11">11</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> delta_base_offset = 1;</td></tr>
+<tr><td class="num" id="LN12">12</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> pack_kept_objects = -1;</td></tr>
+<tr><td class="num" id="LN13">13</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> write_bitmaps;</td></tr>
+<tr><td class="num" id="LN14">14</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>char</span> *packdir, *packtmp;</td></tr>
+<tr><td class="num" id="LN15">15</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN16">16</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> *<span class='keyword'>const</span> git_repack_usage[] = {</td></tr>
+<tr><td class="num" id="LN17">17</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git repack [&lt;options&gt;]"</span>)<span class='expansion'>("git repack [&lt;options&gt;]")</span></span>,</td></tr>
+<tr><td class="num" id="LN18">18</td><td class="line">	<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span></td></tr>
+<tr><td class="num" id="LN19">19</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN20">20</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN21">21</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> incremental_bitmap_conflict_error[] = <span class='macro'>N_(<span class='expansion'>("Incremental repacks are incompatible with bitmap indexes.  Use\n"<br>"--no-write-bitmap-index or disable the pack.writebitmaps configuration."<br>)</span></span></td></tr>
+<tr><td class="num" id="LN22">22</td><td class="line"><span class='string_literal'><span class='macro'>"Incremental repacks are incompatible with bitmap indexes.  Use\n"<span class='expansion'>("Incremental repacks are incompatible with bitmap indexes.  Use\n"<br>"--no-write-bitmap-index or disable the pack.writebitmaps configuration."<br>)</span></span></span></td></tr>
+<tr><td class="num" id="LN23">23</td><td class="line"><span class='string_literal'><span class='macro'>"--no-write-bitmap-index or disable the pack.writebitmaps configuration."<span class='expansion'>("Incremental repacks are incompatible with bitmap indexes.  Use\n"<br>"--no-write-bitmap-index or disable the pack.writebitmaps configuration."<br>)</span></span></span></td></tr>
+<tr><td class="num" id="LN24">24</td><td class="line"><span class='macro'>)<span class='expansion'>("Incremental repacks are incompatible with bitmap indexes.  Use\n"<br>"--no-write-bitmap-index or disable the pack.writebitmaps configuration."<br>)</span></span>;</td></tr>
+<tr><td class="num" id="LN25">25</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN26">26</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN27">27</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> repack_config(<span class='keyword'>const</span> <span class='keyword'>char</span> *var, <span class='keyword'>const</span> <span class='keyword'>char</span> *value, <span class='keyword'>void</span> *cb)</td></tr>
+<tr><td class="num" id="LN28">28</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN29">29</td><td class="line">	<span class='keyword'>if</span> (!strcmp(var, <span class='string_literal'>"repack.usedeltabaseoffset"</span>)) {</td></tr>
+<tr><td class="num" id="LN30">30</td><td class="line">		delta_base_offset = git_config_bool(var, value);</td></tr>
+<tr><td class="num" id="LN31">31</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN32">32</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN33">33</td><td class="line">	<span class='keyword'>if</span> (!strcmp(var, <span class='string_literal'>"repack.packkeptobjects"</span>)) {</td></tr>
+<tr><td class="num" id="LN34">34</td><td class="line">		pack_kept_objects = git_config_bool(var, value);</td></tr>
+<tr><td class="num" id="LN35">35</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN36">36</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN37">37</td><td class="line">	<span class='keyword'>if</span> (!strcmp(var, <span class='string_literal'>"repack.writebitmaps"</span>) ||</td></tr>
+<tr><td class="num" id="LN38">38</td><td class="line">	    !strcmp(var, <span class='string_literal'>"pack.writebitmaps"</span>)) {</td></tr>
+<tr><td class="num" id="LN39">39</td><td class="line">		write_bitmaps = git_config_bool(var, value);</td></tr>
+<tr><td class="num" id="LN40">40</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN41">41</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN42">42</td><td class="line">	<span class='keyword'>return</span> git_default_config(var, value, cb);</td></tr>
+<tr><td class="num" id="LN43">43</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN44">44</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN45">45</td><td class="line"><span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN46">46</td><td class="line"> <span class='comment'>* Remove temporary $GIT_OBJECT_DIRECTORY/pack/.tmp-$$-pack-* files.</span></td></tr>
+<tr><td class="num" id="LN47">47</td><td class="line"> <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN48">48</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> remove_temporary_files(<span class='keyword'>void</span>)</td></tr>
+<tr><td class="num" id="LN49">49</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN50">50</td><td class="line">	<span class='keyword'>struct</span> strbuf buf = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN51">51</td><td class="line">	size_t dirlen, prefixlen;</td></tr>
+<tr><td class="num" id="LN52">52</td><td class="line">	<span class='macro'>DIR<span class='expansion'>PREC_DIR</span></span> *dir;</td></tr>
+<tr><td class="num" id="LN53">53</td><td class="line">	<span class='keyword'>struct</span> <span class='macro'>dirent<span class='expansion'>dirent_prec_psx</span></span> *e;</td></tr>
+<tr><td class="num" id="LN54">54</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN55">55</td><td class="line">	dir = <span class='macro'>opendir(packdir)<span class='expansion'>precompose_utf8_opendir(packdir)</span></span>;</td></tr>
+<tr><td class="num" id="LN56">56</td><td class="line">	<span class='keyword'>if</span> (!dir)</td></tr>
+<tr><td class="num" id="LN57">57</td><td class="line">		<span class='keyword'>return</span>;</td></tr>
+<tr><td class="num" id="LN58">58</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN59">59</td><td class="line">	<span class='comment'>/* Point at the slash at the end of ".../objects/pack/" */</span></td></tr>
+<tr><td class="num" id="LN60">60</td><td class="line">	dirlen = strlen(packdir) + 1;</td></tr>
+<tr><td class="num" id="LN61">61</td><td class="line">	strbuf_addstr(&amp;buf, packtmp);</td></tr>
+<tr><td class="num" id="LN62">62</td><td class="line">	<span class='comment'>/* Hold the length of  ".tmp-%d-pack-" */</span></td></tr>
+<tr><td class="num" id="LN63">63</td><td class="line">	prefixlen = buf.len - dirlen;</td></tr>
+<tr><td class="num" id="LN64">64</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN65">65</td><td class="line">	<span class='keyword'>while</span> ((e = <span class='macro'>readdir(dir)<span class='expansion'>precompose_utf8_readdir(dir)</span></span>)) {</td></tr>
+<tr><td class="num" id="LN66">66</td><td class="line">		<span class='keyword'>if</span> (strncmp(e-&gt;d_name, buf.buf + dirlen, prefixlen))</td></tr>
+<tr><td class="num" id="LN67">67</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN68">68</td><td class="line">		strbuf_setlen(&amp;buf, dirlen);</td></tr>
+<tr><td class="num" id="LN69">69</td><td class="line">		strbuf_addstr(&amp;buf, e-&gt;d_name);</td></tr>
+<tr><td class="num" id="LN70">70</td><td class="line">		unlink(buf.buf);</td></tr>
+<tr><td class="num" id="LN71">71</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN72">72</td><td class="line">	<span class='macro'>closedir(dir)<span class='expansion'>precompose_utf8_closedir(dir)</span></span>;</td></tr>
+<tr><td class="num" id="LN73">73</td><td class="line">	strbuf_release(&amp;buf);</td></tr>
+<tr><td class="num" id="LN74">74</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN75">75</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN76">76</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> remove_pack_on_signal(<span class='keyword'>int</span> signo)</td></tr>
+<tr><td class="num" id="LN77">77</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN78">78</td><td class="line">	remove_temporary_files();</td></tr>
+<tr><td class="num" id="LN79">79</td><td class="line">	sigchain_pop(signo);</td></tr>
+<tr><td class="num" id="LN80">80</td><td class="line">	raise(signo);</td></tr>
+<tr><td class="num" id="LN81">81</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN82">82</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN83">83</td><td class="line"><span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN84">84</td><td class="line"> <span class='comment'>* Adds all packs hex strings to the fname list, which do not</span></td></tr>
+<tr><td class="num" id="LN85">85</td><td class="line"> <span class='comment'>* have a corresponding .keep file.</span></td></tr>
+<tr><td class="num" id="LN86">86</td><td class="line"> <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN87">87</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> get_non_kept_pack_filenames(<span class='keyword'>struct</span> string_list *fname_list)</td></tr>
+<tr><td class="num" id="LN88">88</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN89">89</td><td class="line">	<span class='macro'>DIR<span class='expansion'>PREC_DIR</span></span> *dir;</td></tr>
+<tr><td class="num" id="LN90">90</td><td class="line">	<span class='keyword'>struct</span> <span class='macro'>dirent<span class='expansion'>dirent_prec_psx</span></span> *e;</td></tr>
+<tr><td class="num" id="LN91">91</td><td class="line">	<span class='keyword'>char</span> *fname;</td></tr>
+<tr><td class="num" id="LN92">92</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN93">93</td><td class="line">	<span class='keyword'>if</span> (!(dir = <span class='macro'>opendir(packdir)<span class='expansion'>precompose_utf8_opendir(packdir)</span></span>))</td></tr>
+<tr><td class="num" id="LN94">94</td><td class="line">		<span class='keyword'>return</span>;</td></tr>
+<tr><td class="num" id="LN95">95</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN96">96</td><td class="line">	<span class='keyword'>while</span> ((e = <span class='macro'>readdir(dir)<span class='expansion'>precompose_utf8_readdir(dir)</span></span>) != <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>) {</td></tr>
+<tr><td class="num" id="LN97">97</td><td class="line">		size_t len;</td></tr>
+<tr><td class="num" id="LN98">98</td><td class="line">		<span class='keyword'>if</span> (!strip_suffix(e-&gt;d_name, <span class='string_literal'>".pack"</span>, &amp;len))</td></tr>
+<tr><td class="num" id="LN99">99</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN100">100</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN101">101</td><td class="line">		fname = xmemdupz(e-&gt;d_name, len);</td></tr>
+<tr><td class="num" id="LN102">102</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN103">103</td><td class="line">		<span class='keyword'>if</span> (!file_exists(mkpath(<span class='string_literal'>"%s/%s.keep"</span>, packdir, fname)))</td></tr>
+<tr><td class="num" id="LN104">104</td><td class="line">			string_list_append_nodup(fname_list, fname);</td></tr>
+<tr><td class="num" id="LN105">105</td><td class="line">		<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN106">106</td><td class="line">			free(fname);</td></tr>
+<tr><td class="num" id="LN107">107</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN108">108</td><td class="line">	<span class='macro'>closedir(dir)<span class='expansion'>precompose_utf8_closedir(dir)</span></span>;</td></tr>
+<tr><td class="num" id="LN109">109</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN110">110</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN111">111</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> remove_redundant_pack(<span class='keyword'>const</span> <span class='keyword'>char</span> *dir_name, <span class='keyword'>const</span> <span class='keyword'>char</span> *base_name)</td></tr>
+<tr><td class="num" id="LN112">112</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN113">113</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *exts[] = {<span class='string_literal'>".pack"</span>, <span class='string_literal'>".idx"</span>, <span class='string_literal'>".keep"</span>, <span class='string_literal'>".bitmap"</span>};</td></tr>
+<tr><td class="num" id="LN114">114</td><td class="line">	<span class='keyword'>int</span> i;</td></tr>
+<tr><td class="num" id="LN115">115</td><td class="line">	<span class='keyword'>struct</span> strbuf buf = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN116">116</td><td class="line">	size_t plen;</td></tr>
+<tr><td class="num" id="LN117">117</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN118">118</td><td class="line">	strbuf_addf(&amp;buf, <span class='string_literal'>"%s/%s"</span>, dir_name, base_name);</td></tr>
+<tr><td class="num" id="LN119">119</td><td class="line">	plen = buf.len;</td></tr>
+<tr><td class="num" id="LN120">120</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN121">121</td><td class="line">	<span class='keyword'>for</span> (i = 0; i &lt; <span class='macro'>ARRAY_SIZE(exts)<span class='expansion'>(sizeof(exts) / sizeof((exts)[0]) + (sizeof(char [1 - 2*!(!__builtin_types_compatible_p<br>(__typeof__(exts), __typeof__(&amp;(exts)[0])))]) - 1))</span></span>; i++) {</td></tr>
+<tr><td class="num" id="LN122">122</td><td class="line">		strbuf_setlen(&amp;buf, plen);</td></tr>
+<tr><td class="num" id="LN123">123</td><td class="line">		strbuf_addstr(&amp;buf, exts[i]);</td></tr>
+<tr><td class="num" id="LN124">124</td><td class="line">		unlink(buf.buf);</td></tr>
+<tr><td class="num" id="LN125">125</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN126">126</td><td class="line">	strbuf_release(&amp;buf);</td></tr>
+<tr><td class="num" id="LN127">127</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN128">128</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN129">129</td><td class="line"><span class='directive'>#define <span class='macro'>ALL_INTO_ONE<span class='expansion'>1</span></span> 1</span></td></tr>
+<tr><td class="num" id="LN130">130</td><td class="line"><span class='directive'>#define <span class='macro'>LOOSEN_UNREACHABLE<span class='expansion'>2</span></span> 2</span></td></tr>
+<tr><td class="num" id="LN131">131</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN132">132</td><td class="line"><span class='keyword'>int</span> cmd_repack(<span class='keyword'>int</span> argc, <span class='keyword'>const</span> <span class='keyword'>char</span> **argv, <span class='keyword'>const</span> <span class='keyword'>char</span> *prefix)</td></tr>
+<tr><td class="num" id="LN133">133</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN134">134</td><td class="line">	<span class='keyword'>struct</span> {</td></tr>
+<tr><td class="num" id="LN135">135</td><td class="line">		<span class='keyword'>const</span> <span class='keyword'>char</span> *name;</td></tr>
+<tr><td class="num" id="LN136">136</td><td class="line">		<span class='keyword'>unsigned</span> optional:1;</td></tr>
+<tr><td class="num" id="LN137">137</td><td class="line">	} exts[] = {</td></tr>
+<tr><td class="num" id="LN138">138</td><td class="line">		{<span class='string_literal'>".pack"</span>},</td></tr>
+<tr><td class="num" id="LN139">139</td><td class="line">		{<span class='string_literal'>".idx"</span>},</td></tr>
+<tr><td class="num" id="LN140">140</td><td class="line">		{<span class='string_literal'>".bitmap"</span>, 1},</td></tr>
+<tr><td class="num" id="LN141">141</td><td class="line">	};</td></tr>
+<tr><td class="num" id="LN142">142</td><td class="line">	<span class='keyword'>struct</span> child_process cmd = <span class='macro'>CHILD_PROCESS_INIT<span class='expansion'>{ ((void*)0), { empty_argv, 0, 0 }, { empty_argv, 0, 0 } }</span></span>;</td></tr>
+<tr><td class="num" id="LN143">143</td><td class="line">	<span class='keyword'>struct</span> string_list_item *item;</td></tr>
+<tr><td class="num" id="LN144">144</td><td class="line">	<span class='keyword'>struct</span> string_list names = <span class='macro'>STRING_LIST_INIT_DUP<span class='expansion'>{ ((void*)0), 0, 0, 1, ((void*)0) }</span></span>;</td></tr>
+<tr><td class="num" id="LN145">145</td><td class="line">	<span class='keyword'>struct</span> string_list rollback = <span class='macro'>STRING_LIST_INIT_NODUP<span class='expansion'>{ ((void*)0), 0, 0, 0, ((void*)0) }</span></span>;</td></tr>
+<tr><td class="num" id="LN146">146</td><td class="line">	<span class='keyword'>struct</span> string_list existing_packs = <span class='macro'>STRING_LIST_INIT_DUP<span class='expansion'>{ ((void*)0), 0, 0, 1, ((void*)0) }</span></span>;</td></tr>
+<tr><td class="num" id="LN147">147</td><td class="line">	<span class='keyword'>struct</span> strbuf line = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN148">148</td><td class="line">	<span class='keyword'>int</span> ext, ret, failed;</td></tr>
+<tr><td class="num" id="LN149">149</td><td class="line">	FILE *out;</td></tr>
+<tr><td class="num" id="LN150">150</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN151">151</td><td class="line">	<span class='comment'>/* variables to be filled by option parsing */</span></td></tr>
+<tr><td class="num" id="LN152">152</td><td class="line">	<span class='keyword'>int</span> pack_everything = 0;</td></tr>
+<tr><td class="num" id="LN153">153</td><td class="line">	<span class='keyword'>int</span> delete_redundant = 0;</td></tr>
+<tr><td class="num" id="LN154">154</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *unpack_unreachable = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN155">155</td><td class="line">	<span class='keyword'>int</span> keep_unreachable = 0;</td></tr>
+<tr><td class="num" id="LN156">156</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *window = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, *window_memory = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN157">157</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *depth = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN158">158</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *max_pack_size = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN159">159</td><td class="line">	<span class='keyword'>int</span> no_reuse_delta = 0, no_reuse_object = 0;</td></tr>
+<tr><td class="num" id="LN160">160</td><td class="line">	<span class='keyword'>int</span> no_update_server_info = 0;</td></tr>
+<tr><td class="num" id="LN161">161</td><td class="line">	<span class='keyword'>int</span> quiet = 0;</td></tr>
+<tr><td class="num" id="LN162">162</td><td class="line">	<span class='keyword'>int</span> local = 0;</td></tr>
+<tr><td class="num" id="LN163">163</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN164">164</td><td class="line">	<span class='keyword'>struct</span> option builtin_repack_options[] = {</td></tr>
+<tr><td class="num" id="LN165">165</td><td class="line">		<span class='macro'>OPT_BIT('a', NULL, &amp;pack_everything,<span class='expansion'>{ OPTION_BIT, ('a'), (((void*)0)), (&amp;pack_everything), ((<br>void*)0), (("pack everything in a single pack")), PARSE_OPT_NOARG<br>, ((void*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN166">166</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"pack everything in a single pack"</span>), ALL_INTO_ONE)<span class='expansion'>{ OPTION_BIT, ('a'), (((void*)0)), (&amp;pack_everything), ((<br>void*)0), (("pack everything in a single pack")), PARSE_OPT_NOARG<br>, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN167">167</td><td class="line">		<span class='macro'>OPT_BIT('A', NULL, &amp;pack_everything,<span class='expansion'>{ OPTION_BIT, ('A'), (((void*)0)), (&amp;pack_everything), ((<br>void*)0), (("same as -a, and turn unreachable objects loose")<br>), PARSE_OPT_NOARG, ((void*)0), (2 | 1) }</span></span></td></tr>
+<tr><td class="num" id="LN168">168</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"same as -a, and turn unreachable objects loose"</span>),<span class='expansion'>{ OPTION_BIT, ('A'), (((void*)0)), (&amp;pack_everything), ((<br>void*)0), (("same as -a, and turn unreachable objects loose")<br>), PARSE_OPT_NOARG, ((void*)0), (2 | 1) }</span></span></td></tr>
+<tr><td class="num" id="LN169">169</td><td class="line">				   <span class='macro'>LOOSEN_UNREACHABLE | ALL_INTO_ONE)<span class='expansion'>{ OPTION_BIT, ('A'), (((void*)0)), (&amp;pack_everything), ((<br>void*)0), (("same as -a, and turn unreachable objects loose")<br>), PARSE_OPT_NOARG, ((void*)0), (2 | 1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN170">170</td><td class="line">		<span class='macro'>OPT_BOOL('d', NULL, &amp;delete_redundant,<span class='expansion'>{ OPTION_SET_INT, ('d'), (((void*)0)), (&amp;delete_redundant<br>), ((void*)0), (("remove redundant packs, and run git-prune-packed"<br>)), PARSE_OPT_NOARG, ((void*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN171">171</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"remove redundant packs, and run git-prune-packed"</span>))<span class='expansion'>{ OPTION_SET_INT, ('d'), (((void*)0)), (&amp;delete_redundant<br>), ((void*)0), (("remove redundant packs, and run git-prune-packed"<br>)), PARSE_OPT_NOARG, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN172">172</td><td class="line">		<span class='macro'>OPT_BOOL('f', NULL, &amp;no_reuse_delta,<span class='expansion'>{ OPTION_SET_INT, ('f'), (((void*)0)), (&amp;no_reuse_delta),<br> ((void*)0), (("pass --no-reuse-delta to git-pack-objects")),<br> PARSE_OPT_NOARG, ((void*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN173">173</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"pass --no-reuse-delta to git-pack-objects"</span>))<span class='expansion'>{ OPTION_SET_INT, ('f'), (((void*)0)), (&amp;no_reuse_delta),<br> ((void*)0), (("pass --no-reuse-delta to git-pack-objects")),<br> PARSE_OPT_NOARG, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN174">174</td><td class="line">		<span class='macro'>OPT_BOOL('F', NULL, &amp;no_reuse_object,<span class='expansion'>{ OPTION_SET_INT, ('F'), (((void*)0)), (&amp;no_reuse_object)<br>, ((void*)0), (("pass --no-reuse-object to git-pack-objects")<br>), PARSE_OPT_NOARG, ((void*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN175">175</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"pass --no-reuse-object to git-pack-objects"</span>))<span class='expansion'>{ OPTION_SET_INT, ('F'), (((void*)0)), (&amp;no_reuse_object)<br>, ((void*)0), (("pass --no-reuse-object to git-pack-objects")<br>), PARSE_OPT_NOARG, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN176">176</td><td class="line">		<span class='macro'>OPT_BOOL('n', NULL, &amp;no_update_server_info,<span class='expansion'>{ OPTION_SET_INT, ('n'), (((void*)0)), (&amp;no_update_server_info<br>), ((void*)0), (("do not run git-update-server-info")), PARSE_OPT_NOARG<br>, ((void*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN177">177</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"do not run git-update-server-info"</span>))<span class='expansion'>{ OPTION_SET_INT, ('n'), (((void*)0)), (&amp;no_update_server_info<br>), ((void*)0), (("do not run git-update-server-info")), PARSE_OPT_NOARG<br>, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN178">178</td><td class="line">		<span class='macro'>OPT__QUIET(&amp;quiet, N_(<span class='string_literal'>"be quiet"</span>))<span class='expansion'>{ OPTION_COUNTUP, ('q'), ("quiet"), ((&amp;quiet)), ((void*)0<br>), ((("be quiet"))), PARSE_OPT_NOARG }</span></span>,</td></tr>
+<tr><td class="num" id="LN179">179</td><td class="line">		<span class='macro'>OPT_BOOL('l', <span class='string_literal'>"local"</span>, &amp;local,<span class='expansion'>{ OPTION_SET_INT, ('l'), ("local"), (&amp;local), ((void*)0),<br> (("pass --local to git-pack-objects")), PARSE_OPT_NOARG, ((void<br>*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN180">180</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"pass --local to git-pack-objects"</span>))<span class='expansion'>{ OPTION_SET_INT, ('l'), ("local"), (&amp;local), ((void*)0),<br> (("pass --local to git-pack-objects")), PARSE_OPT_NOARG, ((void<br>*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN181">181</td><td class="line">		<span class='macro'>OPT_BOOL('b', <span class='string_literal'>"write-bitmap-index"</span>, &amp;write_bitmaps,<span class='expansion'>{ OPTION_SET_INT, ('b'), ("write-bitmap-index"), (&amp;write_bitmaps<br>), ((void*)0), (("write bitmap index")), PARSE_OPT_NOARG, ((void<br>*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN182">182</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"write bitmap index"</span>))<span class='expansion'>{ OPTION_SET_INT, ('b'), ("write-bitmap-index"), (&amp;write_bitmaps<br>), ((void*)0), (("write bitmap index")), PARSE_OPT_NOARG, ((void<br>*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN183">183</td><td class="line">		<span class='macro'>OPT_STRING(0, <span class='string_literal'>"unpack-unreachable"</span>, &amp;unpack_unreachable, N_(<span class='string_literal'>"approxidate"</span>),<span class='expansion'>{ OPTION_STRING, (0), ("unpack-unreachable"), (&amp;unpack_unreachable<br>), (("approxidate")), (("with -A, do not loosen objects older than this"<br>)) }</span></span></td></tr>
+<tr><td class="num" id="LN184">184</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"with -A, do not loosen objects older than this"</span>))<span class='expansion'>{ OPTION_STRING, (0), ("unpack-unreachable"), (&amp;unpack_unreachable<br>), (("approxidate")), (("with -A, do not loosen objects older than this"<br>)) }</span></span>,</td></tr>
+<tr><td class="num" id="LN185">185</td><td class="line">		<span class='macro'>OPT_BOOL('k', <span class='string_literal'>"keep-unreachable"</span>, &amp;keep_unreachable,<span class='expansion'>{ OPTION_SET_INT, ('k'), ("keep-unreachable"), (&amp;keep_unreachable<br>), ((void*)0), (("with -a, repack unreachable objects")), PARSE_OPT_NOARG<br>, ((void*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN186">186</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"with -a, repack unreachable objects"</span>))<span class='expansion'>{ OPTION_SET_INT, ('k'), ("keep-unreachable"), (&amp;keep_unreachable<br>), ((void*)0), (("with -a, repack unreachable objects")), PARSE_OPT_NOARG<br>, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN187">187</td><td class="line">		<span class='macro'>OPT_STRING(0, <span class='string_literal'>"window"</span>, &amp;window, N_(<span class='string_literal'>"n"</span>),<span class='expansion'>{ OPTION_STRING, (0), ("window"), (&amp;window), (("n")), (("size of the window used for delta compression"<br>)) }</span></span></td></tr>
+<tr><td class="num" id="LN188">188</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"size of the window used for delta compression"</span>))<span class='expansion'>{ OPTION_STRING, (0), ("window"), (&amp;window), (("n")), (("size of the window used for delta compression"<br>)) }</span></span>,</td></tr>
+<tr><td class="num" id="LN189">189</td><td class="line">		<span class='macro'>OPT_STRING(0, <span class='string_literal'>"window-memory"</span>, &amp;window_memory, N_(<span class='string_literal'>"bytes"</span>),<span class='expansion'>{ OPTION_STRING, (0), ("window-memory"), (&amp;window_memory)<br>, (("bytes")), (("same as the above, but limit memory size instead of entries count"<br>)) }</span></span></td></tr>
+<tr><td class="num" id="LN190">190</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"same as the above, but limit memory size instead of entries count"</span>))<span class='expansion'>{ OPTION_STRING, (0), ("window-memory"), (&amp;window_memory)<br>, (("bytes")), (("same as the above, but limit memory size instead of entries count"<br>)) }</span></span>,</td></tr>
+<tr><td class="num" id="LN191">191</td><td class="line">		<span class='macro'>OPT_STRING(0, <span class='string_literal'>"depth"</span>, &amp;depth, N_(<span class='string_literal'>"n"</span>),<span class='expansion'>{ OPTION_STRING, (0), ("depth"), (&amp;depth), (("n")), (("limits the maximum delta depth"<br>)) }</span></span></td></tr>
+<tr><td class="num" id="LN192">192</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"limits the maximum delta depth"</span>))<span class='expansion'>{ OPTION_STRING, (0), ("depth"), (&amp;depth), (("n")), (("limits the maximum delta depth"<br>)) }</span></span>,</td></tr>
+<tr><td class="num" id="LN193">193</td><td class="line">		<span class='macro'>OPT_STRING(0, <span class='string_literal'>"max-pack-size"</span>, &amp;max_pack_size, N_(<span class='string_literal'>"bytes"</span>),<span class='expansion'>{ OPTION_STRING, (0), ("max-pack-size"), (&amp;max_pack_size)<br>, (("bytes")), (("maximum size of each packfile")) }</span></span></td></tr>
+<tr><td class="num" id="LN194">194</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"maximum size of each packfile"</span>))<span class='expansion'>{ OPTION_STRING, (0), ("max-pack-size"), (&amp;max_pack_size)<br>, (("bytes")), (("maximum size of each packfile")) }</span></span>,</td></tr>
+<tr><td class="num" id="LN195">195</td><td class="line">		<span class='macro'>OPT_BOOL(0, <span class='string_literal'>"pack-kept-objects"</span>, &amp;pack_kept_objects,<span class='expansion'>{ OPTION_SET_INT, (0), ("pack-kept-objects"), (&amp;pack_kept_objects<br>), ((void*)0), (("repack objects in packs marked with .keep")<br>), PARSE_OPT_NOARG, ((void*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN196">196</td><td class="line">				<span class='macro'>N_(<span class='string_literal'>"repack objects in packs marked with .keep"</span>))<span class='expansion'>{ OPTION_SET_INT, (0), ("pack-kept-objects"), (&amp;pack_kept_objects<br>), ((void*)0), (("repack objects in packs marked with .keep")<br>), PARSE_OPT_NOARG, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN197">197</td><td class="line">		<span class='macro'>OPT_END()<span class='expansion'>{ OPTION_END }</span></span></td></tr>
+<tr><td class="num" id="LN198">198</td><td class="line">	};</td></tr>
+<tr><td class="num" id="LN199">199</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN200">200</td><td class="line">	git_config(repack_config, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>);</td></tr>
+<tr><td class="num" id="LN201">201</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN202">202</td><td class="line">	argc = <span class="mrange">parse_options(argc, argv, prefix, builtin_repack_options,</td></tr></span>
+<tr><td class="num"></td><td class="line"><div id="EndPath" class="msg msgEvent" style="margin-left:9ex">Value stored to 'argc' is never read</div></td></tr>
+<tr><td class="num" id="LN203">203</td><td class="line">				<span class="mrange">git_repack_usage, 0)</span>;</td></tr>
+<tr><td class="num" id="LN204">204</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN205">205</td><td class="line">	<span class='keyword'>if</span> (delete_redundant &amp;&amp; repository_format_precious_objects)</td></tr>
+<tr><td class="num" id="LN206">206</td><td class="line">		die(_(<span class='string_literal'>"cannot delete packs in a precious-objects repo"</span>));</td></tr>
+<tr><td class="num" id="LN207">207</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN208">208</td><td class="line">	<span class='keyword'>if</span> (keep_unreachable &amp;&amp;</td></tr>
+<tr><td class="num" id="LN209">209</td><td class="line">	    (unpack_unreachable || (pack_everything &amp; <span class='macro'>LOOSEN_UNREACHABLE<span class='expansion'>2</span></span>)))</td></tr>
+<tr><td class="num" id="LN210">210</td><td class="line">		die(_(<span class='string_literal'>"--keep-unreachable and -A are incompatible"</span>));</td></tr>
+<tr><td class="num" id="LN211">211</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN212">212</td><td class="line">	<span class='keyword'>if</span> (pack_kept_objects &lt; 0)</td></tr>
+<tr><td class="num" id="LN213">213</td><td class="line">		pack_kept_objects = write_bitmaps;</td></tr>
+<tr><td class="num" id="LN214">214</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN215">215</td><td class="line">	<span class='keyword'>if</span> (write_bitmaps &amp;&amp; !(pack_everything &amp; <span class='macro'>ALL_INTO_ONE<span class='expansion'>1</span></span>))</td></tr>
+<tr><td class="num" id="LN216">216</td><td class="line">		die(_(incremental_bitmap_conflict_error));</td></tr>
+<tr><td class="num" id="LN217">217</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN218">218</td><td class="line">	packdir = mkpathdup(<span class='string_literal'>"%s/pack"</span>, get_object_directory());</td></tr>
+<tr><td class="num" id="LN219">219</td><td class="line">	packtmp = mkpathdup(<span class='string_literal'>"%s/.tmp-%d-pack"</span>, packdir, (<span class='keyword'>int</span>)getpid());</td></tr>
+<tr><td class="num" id="LN220">220</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN221">221</td><td class="line">	sigchain_push_common(remove_pack_on_signal);</td></tr>
+<tr><td class="num" id="LN222">222</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN223">223</td><td class="line">	argv_array_push(&amp;cmd.args, <span class='string_literal'>"pack-objects"</span>);</td></tr>
+<tr><td class="num" id="LN224">224</td><td class="line">	argv_array_push(&amp;cmd.args, <span class='string_literal'>"--keep-true-parents"</span>);</td></tr>
+<tr><td class="num" id="LN225">225</td><td class="line">	<span class='keyword'>if</span> (!pack_kept_objects)</td></tr>
+<tr><td class="num" id="LN226">226</td><td class="line">		argv_array_push(&amp;cmd.args, <span class='string_literal'>"--honor-pack-keep"</span>);</td></tr>
+<tr><td class="num" id="LN227">227</td><td class="line">	argv_array_push(&amp;cmd.args, <span class='string_literal'>"--non-empty"</span>);</td></tr>
+<tr><td class="num" id="LN228">228</td><td class="line">	argv_array_push(&amp;cmd.args, <span class='string_literal'>"--all"</span>);</td></tr>
+<tr><td class="num" id="LN229">229</td><td class="line">	argv_array_push(&amp;cmd.args, <span class='string_literal'>"--reflog"</span>);</td></tr>
+<tr><td class="num" id="LN230">230</td><td class="line">	argv_array_push(&amp;cmd.args, <span class='string_literal'>"--indexed-objects"</span>);</td></tr>
+<tr><td class="num" id="LN231">231</td><td class="line">	<span class='keyword'>if</span> (window)</td></tr>
+<tr><td class="num" id="LN232">232</td><td class="line">		argv_array_pushf(&amp;cmd.args, <span class='string_literal'>"--window=%s"</span>, window);</td></tr>
+<tr><td class="num" id="LN233">233</td><td class="line">	<span class='keyword'>if</span> (window_memory)</td></tr>
+<tr><td class="num" id="LN234">234</td><td class="line">		argv_array_pushf(&amp;cmd.args, <span class='string_literal'>"--window-memory=%s"</span>, window_memory);</td></tr>
+<tr><td class="num" id="LN235">235</td><td class="line">	<span class='keyword'>if</span> (depth)</td></tr>
+<tr><td class="num" id="LN236">236</td><td class="line">		argv_array_pushf(&amp;cmd.args, <span class='string_literal'>"--depth=%s"</span>, depth);</td></tr>
+<tr><td class="num" id="LN237">237</td><td class="line">	<span class='keyword'>if</span> (max_pack_size)</td></tr>
+<tr><td class="num" id="LN238">238</td><td class="line">		argv_array_pushf(&amp;cmd.args, <span class='string_literal'>"--max-pack-size=%s"</span>, max_pack_size);</td></tr>
+<tr><td class="num" id="LN239">239</td><td class="line">	<span class='keyword'>if</span> (no_reuse_delta)</td></tr>
+<tr><td class="num" id="LN240">240</td><td class="line">		argv_array_pushf(&amp;cmd.args, <span class='string_literal'>"--no-reuse-delta"</span>);</td></tr>
+<tr><td class="num" id="LN241">241</td><td class="line">	<span class='keyword'>if</span> (no_reuse_object)</td></tr>
+<tr><td class="num" id="LN242">242</td><td class="line">		argv_array_pushf(&amp;cmd.args, <span class='string_literal'>"--no-reuse-object"</span>);</td></tr>
+<tr><td class="num" id="LN243">243</td><td class="line">	<span class='keyword'>if</span> (write_bitmaps)</td></tr>
+<tr><td class="num" id="LN244">244</td><td class="line">		argv_array_push(&amp;cmd.args, <span class='string_literal'>"--write-bitmap-index"</span>);</td></tr>
+<tr><td class="num" id="LN245">245</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN246">246</td><td class="line">	<span class='keyword'>if</span> (pack_everything &amp; <span class='macro'>ALL_INTO_ONE<span class='expansion'>1</span></span>) {</td></tr>
+<tr><td class="num" id="LN247">247</td><td class="line">		get_non_kept_pack_filenames(&amp;existing_packs);</td></tr>
+<tr><td class="num" id="LN248">248</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN249">249</td><td class="line">		<span class='keyword'>if</span> (existing_packs.nr &amp;&amp; delete_redundant) {</td></tr>
+<tr><td class="num" id="LN250">250</td><td class="line">			<span class='keyword'>if</span> (unpack_unreachable) {</td></tr>
+<tr><td class="num" id="LN251">251</td><td class="line">				argv_array_pushf(&amp;cmd.args,</td></tr>
+<tr><td class="num" id="LN252">252</td><td class="line">						<span class='string_literal'>"--unpack-unreachable=%s"</span>,</td></tr>
+<tr><td class="num" id="LN253">253</td><td class="line">						unpack_unreachable);</td></tr>
+<tr><td class="num" id="LN254">254</td><td class="line">				argv_array_push(&amp;cmd.env_array, <span class='string_literal'>"GIT_REF_PARANOIA=1"</span>);</td></tr>
+<tr><td class="num" id="LN255">255</td><td class="line">			} <span class='keyword'>else</span> <span class='keyword'>if</span> (pack_everything &amp; <span class='macro'>LOOSEN_UNREACHABLE<span class='expansion'>2</span></span>) {</td></tr>
+<tr><td class="num" id="LN256">256</td><td class="line">				argv_array_push(&amp;cmd.args,</td></tr>
+<tr><td class="num" id="LN257">257</td><td class="line">						<span class='string_literal'>"--unpack-unreachable"</span>);</td></tr>
+<tr><td class="num" id="LN258">258</td><td class="line">			} <span class='keyword'>else</span> <span class='keyword'>if</span> (keep_unreachable) {</td></tr>
+<tr><td class="num" id="LN259">259</td><td class="line">				argv_array_push(&amp;cmd.args, <span class='string_literal'>"--keep-unreachable"</span>);</td></tr>
+<tr><td class="num" id="LN260">260</td><td class="line">				argv_array_push(&amp;cmd.args, <span class='string_literal'>"--pack-loose-unreachable"</span>);</td></tr>
+<tr><td class="num" id="LN261">261</td><td class="line">			} <span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN262">262</td><td class="line">				argv_array_push(&amp;cmd.env_array, <span class='string_literal'>"GIT_REF_PARANOIA=1"</span>);</td></tr>
+<tr><td class="num" id="LN263">263</td><td class="line">			}</td></tr>
+<tr><td class="num" id="LN264">264</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN265">265</td><td class="line">	} <span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN266">266</td><td class="line">		argv_array_push(&amp;cmd.args, <span class='string_literal'>"--unpacked"</span>);</td></tr>
+<tr><td class="num" id="LN267">267</td><td class="line">		argv_array_push(&amp;cmd.args, <span class='string_literal'>"--incremental"</span>);</td></tr>
+<tr><td class="num" id="LN268">268</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN269">269</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN270">270</td><td class="line">	<span class='keyword'>if</span> (local)</td></tr>
+<tr><td class="num" id="LN271">271</td><td class="line">		argv_array_push(&amp;cmd.args,  <span class='string_literal'>"--local"</span>);</td></tr>
+<tr><td class="num" id="LN272">272</td><td class="line">	<span class='keyword'>if</span> (quiet)</td></tr>
+<tr><td class="num" id="LN273">273</td><td class="line">		argv_array_push(&amp;cmd.args,  <span class='string_literal'>"--quiet"</span>);</td></tr>
+<tr><td class="num" id="LN274">274</td><td class="line">	<span class='keyword'>if</span> (delta_base_offset)</td></tr>
+<tr><td class="num" id="LN275">275</td><td class="line">		argv_array_push(&amp;cmd.args,  <span class='string_literal'>"--delta-base-offset"</span>);</td></tr>
+<tr><td class="num" id="LN276">276</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN277">277</td><td class="line">	argv_array_push(&amp;cmd.args, packtmp);</td></tr>
+<tr><td class="num" id="LN278">278</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN279">279</td><td class="line">	cmd.git_cmd = 1;</td></tr>
+<tr><td class="num" id="LN280">280</td><td class="line">	cmd.out = -1;</td></tr>
+<tr><td class="num" id="LN281">281</td><td class="line">	cmd.no_stdin = 1;</td></tr>
+<tr><td class="num" id="LN282">282</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN283">283</td><td class="line">	ret = start_command(&amp;cmd);</td></tr>
+<tr><td class="num" id="LN284">284</td><td class="line">	<span class='keyword'>if</span> (ret)</td></tr>
+<tr><td class="num" id="LN285">285</td><td class="line">		<span class='keyword'>return</span> ret;</td></tr>
+<tr><td class="num" id="LN286">286</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN287">287</td><td class="line">	out = xfdopen(cmd.out, <span class='string_literal'>"r"</span>);</td></tr>
+<tr><td class="num" id="LN288">288</td><td class="line">	<span class='keyword'>while</span> (strbuf_getline_lf(&amp;line, out) != <span class='macro'>EOF<span class='expansion'>(-1)</span></span>) {</td></tr>
+<tr><td class="num" id="LN289">289</td><td class="line">		<span class='keyword'>if</span> (line.len != 40)</td></tr>
+<tr><td class="num" id="LN290">290</td><td class="line">			die(<span class='string_literal'>"repack: Expecting 40 character sha1 lines only from pack-objects."</span>);</td></tr>
+<tr><td class="num" id="LN291">291</td><td class="line">		string_list_append(&amp;names, line.buf);</td></tr>
+<tr><td class="num" id="LN292">292</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN293">293</td><td class="line">	fclose(out);</td></tr>
+<tr><td class="num" id="LN294">294</td><td class="line">	ret = finish_command(&amp;cmd);</td></tr>
+<tr><td class="num" id="LN295">295</td><td class="line">	<span class='keyword'>if</span> (ret)</td></tr>
+<tr><td class="num" id="LN296">296</td><td class="line">		<span class='keyword'>return</span> ret;</td></tr>
+<tr><td class="num" id="LN297">297</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN298">298</td><td class="line">	<span class='keyword'>if</span> (!names.nr &amp;&amp; !quiet)</td></tr>
+<tr><td class="num" id="LN299">299</td><td class="line">		printf(<span class='string_literal'>"Nothing new to pack.\n"</span>);</td></tr>
+<tr><td class="num" id="LN300">300</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN301">301</td><td class="line">	<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN302">302</td><td class="line">	 <span class='comment'>* Ok we have prepared all new packfiles.</span></td></tr>
+<tr><td class="num" id="LN303">303</td><td class="line">	 <span class='comment'>* First see if there are packs of the same name and if so</span></td></tr>
+<tr><td class="num" id="LN304">304</td><td class="line">	 <span class='comment'>* if we can move them out of the way (this can happen if we</span></td></tr>
+<tr><td class="num" id="LN305">305</td><td class="line">	 <span class='comment'>* repacked immediately after packing fully.</span></td></tr>
+<tr><td class="num" id="LN306">306</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN307">307</td><td class="line">	failed = 0;</td></tr>
+<tr><td class="num" id="LN308">308</td><td class="line">	<span class='macro'>for_each_string_list_item(item, &amp;names)<span class='expansion'>for (item = (&amp;names)-&gt;items; item &lt; (&amp;names)-&gt;<br>items + (&amp;names)-&gt;nr; ++item)</span></span> {</td></tr>
+<tr><td class="num" id="LN309">309</td><td class="line">		<span class='keyword'>for</span> (ext = 0; ext &lt; <span class='macro'>ARRAY_SIZE(exts)<span class='expansion'>(sizeof(exts) / sizeof((exts)[0]) + (sizeof(char [1 - 2*!(!__builtin_types_compatible_p<br>(__typeof__(exts), __typeof__(&amp;(exts)[0])))]) - 1))</span></span>; ext++) {</td></tr>
+<tr><td class="num" id="LN310">310</td><td class="line">			<span class='keyword'>char</span> *fname, *fname_old;</td></tr>
+<tr><td class="num" id="LN311">311</td><td class="line">			fname = mkpathdup(<span class='string_literal'>"%s/pack-%s%s"</span>, packdir,</td></tr>
+<tr><td class="num" id="LN312">312</td><td class="line">						item-&gt;string, exts[ext].name);</td></tr>
+<tr><td class="num" id="LN313">313</td><td class="line">			<span class='keyword'>if</span> (!file_exists(fname)) {</td></tr>
+<tr><td class="num" id="LN314">314</td><td class="line">				free(fname);</td></tr>
+<tr><td class="num" id="LN315">315</td><td class="line">				<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN316">316</td><td class="line">			}</td></tr>
+<tr><td class="num" id="LN317">317</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN318">318</td><td class="line">			fname_old = mkpathdup(<span class='string_literal'>"%s/old-%s%s"</span>, packdir,</td></tr>
+<tr><td class="num" id="LN319">319</td><td class="line">						item-&gt;string, exts[ext].name);</td></tr>
+<tr><td class="num" id="LN320">320</td><td class="line">			<span class='keyword'>if</span> (file_exists(fname_old))</td></tr>
+<tr><td class="num" id="LN321">321</td><td class="line">				<span class='keyword'>if</span> (unlink(fname_old))</td></tr>
+<tr><td class="num" id="LN322">322</td><td class="line">					failed = 1;</td></tr>
+<tr><td class="num" id="LN323">323</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN324">324</td><td class="line">			<span class='keyword'>if</span> (!failed &amp;&amp; rename(fname, fname_old)) {</td></tr>
+<tr><td class="num" id="LN325">325</td><td class="line">				free(fname);</td></tr>
+<tr><td class="num" id="LN326">326</td><td class="line">				free(fname_old);</td></tr>
+<tr><td class="num" id="LN327">327</td><td class="line">				failed = 1;</td></tr>
+<tr><td class="num" id="LN328">328</td><td class="line">				<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN329">329</td><td class="line">			} <span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN330">330</td><td class="line">				string_list_append(&amp;rollback, fname);</td></tr>
+<tr><td class="num" id="LN331">331</td><td class="line">				free(fname_old);</td></tr>
+<tr><td class="num" id="LN332">332</td><td class="line">			}</td></tr>
+<tr><td class="num" id="LN333">333</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN334">334</td><td class="line">		<span class='keyword'>if</span> (failed)</td></tr>
+<tr><td class="num" id="LN335">335</td><td class="line">			<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN336">336</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN337">337</td><td class="line">	<span class='keyword'>if</span> (failed) {</td></tr>
+<tr><td class="num" id="LN338">338</td><td class="line">		<span class='keyword'>struct</span> string_list rollback_failure = <span class='macro'>STRING_LIST_INIT_DUP<span class='expansion'>{ ((void*)0), 0, 0, 1, ((void*)0) }</span></span>;</td></tr>
+<tr><td class="num" id="LN339">339</td><td class="line">		<span class='macro'>for_each_string_list_item(item, &amp;rollback)<span class='expansion'>for (item = (&amp;rollback)-&gt;items; item &lt; (&amp;rollback<br>)-&gt;items + (&amp;rollback)-&gt;nr; ++item)</span></span> {</td></tr>
+<tr><td class="num" id="LN340">340</td><td class="line">			<span class='keyword'>char</span> *fname, *fname_old;</td></tr>
+<tr><td class="num" id="LN341">341</td><td class="line">			fname = mkpathdup(<span class='string_literal'>"%s/%s"</span>, packdir, item-&gt;string);</td></tr>
+<tr><td class="num" id="LN342">342</td><td class="line">			fname_old = mkpathdup(<span class='string_literal'>"%s/old-%s"</span>, packdir, item-&gt;string);</td></tr>
+<tr><td class="num" id="LN343">343</td><td class="line">			<span class='keyword'>if</span> (rename(fname_old, fname))</td></tr>
+<tr><td class="num" id="LN344">344</td><td class="line">				string_list_append(&amp;rollback_failure, fname);</td></tr>
+<tr><td class="num" id="LN345">345</td><td class="line">			free(fname);</td></tr>
+<tr><td class="num" id="LN346">346</td><td class="line">			free(fname_old);</td></tr>
+<tr><td class="num" id="LN347">347</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN348">348</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN349">349</td><td class="line">		<span class='keyword'>if</span> (rollback_failure.nr) {</td></tr>
+<tr><td class="num" id="LN350">350</td><td class="line">			<span class='keyword'>int</span> i;</td></tr>
+<tr><td class="num" id="LN351">351</td><td class="line">			fprintf(<span class='macro'>stderr<span class='expansion'>__stderrp</span></span>,</td></tr>
+<tr><td class="num" id="LN352">352</td><td class="line">				<span class='string_literal'>"WARNING: Some packs in use have been renamed by\n"</span></td></tr>
+<tr><td class="num" id="LN353">353</td><td class="line">				<span class='string_literal'>"WARNING: prefixing old- to their name, in order to\n"</span></td></tr>
+<tr><td class="num" id="LN354">354</td><td class="line">				<span class='string_literal'>"WARNING: replace them with the new version of the\n"</span></td></tr>
+<tr><td class="num" id="LN355">355</td><td class="line">				<span class='string_literal'>"WARNING: file.  But the operation failed, and the\n"</span></td></tr>
+<tr><td class="num" id="LN356">356</td><td class="line">				<span class='string_literal'>"WARNING: attempt to rename them back to their\n"</span></td></tr>
+<tr><td class="num" id="LN357">357</td><td class="line">				<span class='string_literal'>"WARNING: original names also failed.\n"</span></td></tr>
+<tr><td class="num" id="LN358">358</td><td class="line">				<span class='string_literal'>"WARNING: Please rename them in %s manually:\n"</span>, packdir);</td></tr>
+<tr><td class="num" id="LN359">359</td><td class="line">			<span class='keyword'>for</span> (i = 0; i &lt; rollback_failure.nr; i++)</td></tr>
+<tr><td class="num" id="LN360">360</td><td class="line">				fprintf(<span class='macro'>stderr<span class='expansion'>__stderrp</span></span>, <span class='string_literal'>"WARNING:   old-%s -&gt; %s\n"</span>,</td></tr>
+<tr><td class="num" id="LN361">361</td><td class="line">					rollback_failure.items[i].string,</td></tr>
+<tr><td class="num" id="LN362">362</td><td class="line">					rollback_failure.items[i].string);</td></tr>
+<tr><td class="num" id="LN363">363</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN364">364</td><td class="line">		exit(1);</td></tr>
+<tr><td class="num" id="LN365">365</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN366">366</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN367">367</td><td class="line">	<span class='comment'>/* Now the ones with the same name are out of the way... */</span></td></tr>
+<tr><td class="num" id="LN368">368</td><td class="line">	<span class='macro'>for_each_string_list_item(item, &amp;names)<span class='expansion'>for (item = (&amp;names)-&gt;items; item &lt; (&amp;names)-&gt;<br>items + (&amp;names)-&gt;nr; ++item)</span></span> {</td></tr>
+<tr><td class="num" id="LN369">369</td><td class="line">		<span class='keyword'>for</span> (ext = 0; ext &lt; <span class='macro'>ARRAY_SIZE(exts)<span class='expansion'>(sizeof(exts) / sizeof((exts)[0]) + (sizeof(char [1 - 2*!(!__builtin_types_compatible_p<br>(__typeof__(exts), __typeof__(&amp;(exts)[0])))]) - 1))</span></span>; ext++) {</td></tr>
+<tr><td class="num" id="LN370">370</td><td class="line">			<span class='keyword'>char</span> *fname, *fname_old;</td></tr>
+<tr><td class="num" id="LN371">371</td><td class="line">			<span class='keyword'>struct</span> stat statbuffer;</td></tr>
+<tr><td class="num" id="LN372">372</td><td class="line">			<span class='keyword'>int</span> exists = 0;</td></tr>
+<tr><td class="num" id="LN373">373</td><td class="line">			fname = mkpathdup(<span class='string_literal'>"%s/pack-%s%s"</span>,</td></tr>
+<tr><td class="num" id="LN374">374</td><td class="line">					packdir, item-&gt;string, exts[ext].name);</td></tr>
+<tr><td class="num" id="LN375">375</td><td class="line">			fname_old = mkpathdup(<span class='string_literal'>"%s-%s%s"</span>,</td></tr>
+<tr><td class="num" id="LN376">376</td><td class="line">					packtmp, item-&gt;string, exts[ext].name);</td></tr>
+<tr><td class="num" id="LN377">377</td><td class="line">			<span class='keyword'>if</span> (!stat(fname_old, &amp;statbuffer)) {</td></tr>
+<tr><td class="num" id="LN378">378</td><td class="line">				statbuffer.st_mode &amp;= ~(<span class='macro'>S_IWUSR<span class='expansion'>0000200</span></span> | <span class='macro'>S_IWGRP<span class='expansion'>0000020</span></span> | <span class='macro'>S_IWOTH<span class='expansion'>0000002</span></span>);</td></tr>
+<tr><td class="num" id="LN379">379</td><td class="line">				chmod(fname_old, statbuffer.st_mode);</td></tr>
+<tr><td class="num" id="LN380">380</td><td class="line">				exists = 1;</td></tr>
+<tr><td class="num" id="LN381">381</td><td class="line">			}</td></tr>
+<tr><td class="num" id="LN382">382</td><td class="line">			<span class='keyword'>if</span> (exists || !exts[ext].optional) {</td></tr>
+<tr><td class="num" id="LN383">383</td><td class="line">				<span class='keyword'>if</span> (rename(fname_old, fname))</td></tr>
+<tr><td class="num" id="LN384">384</td><td class="line">					die_errno(_(<span class='string_literal'>"renaming '%s' failed"</span>), fname_old);</td></tr>
+<tr><td class="num" id="LN385">385</td><td class="line">			}</td></tr>
+<tr><td class="num" id="LN386">386</td><td class="line">			free(fname);</td></tr>
+<tr><td class="num" id="LN387">387</td><td class="line">			free(fname_old);</td></tr>
+<tr><td class="num" id="LN388">388</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN389">389</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN390">390</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN391">391</td><td class="line">	<span class='comment'>/* Remove the "old-" files */</span></td></tr>
+<tr><td class="num" id="LN392">392</td><td class="line">	<span class='macro'>for_each_string_list_item(item, &amp;names)<span class='expansion'>for (item = (&amp;names)-&gt;items; item &lt; (&amp;names)-&gt;<br>items + (&amp;names)-&gt;nr; ++item)</span></span> {</td></tr>
+<tr><td class="num" id="LN393">393</td><td class="line">		<span class='keyword'>for</span> (ext = 0; ext &lt; <span class='macro'>ARRAY_SIZE(exts)<span class='expansion'>(sizeof(exts) / sizeof((exts)[0]) + (sizeof(char [1 - 2*!(!__builtin_types_compatible_p<br>(__typeof__(exts), __typeof__(&amp;(exts)[0])))]) - 1))</span></span>; ext++) {</td></tr>
+<tr><td class="num" id="LN394">394</td><td class="line">			<span class='keyword'>char</span> *fname;</td></tr>
+<tr><td class="num" id="LN395">395</td><td class="line">			fname = mkpathdup(<span class='string_literal'>"%s/old-%s%s"</span>,</td></tr>
+<tr><td class="num" id="LN396">396</td><td class="line">					  packdir,</td></tr>
+<tr><td class="num" id="LN397">397</td><td class="line">					  item-&gt;string,</td></tr>
+<tr><td class="num" id="LN398">398</td><td class="line">					  exts[ext].name);</td></tr>
+<tr><td class="num" id="LN399">399</td><td class="line">			<span class='keyword'>if</span> (remove_path(fname))</td></tr>
+<tr><td class="num" id="LN400">400</td><td class="line">				warning(_(<span class='string_literal'>"failed to remove '%s'"</span>), fname);</td></tr>
+<tr><td class="num" id="LN401">401</td><td class="line">			free(fname);</td></tr>
+<tr><td class="num" id="LN402">402</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN403">403</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN404">404</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN405">405</td><td class="line">	<span class='comment'>/* End of pack replacement. */</span></td></tr>
+<tr><td class="num" id="LN406">406</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN407">407</td><td class="line">	<span class='keyword'>if</span> (delete_redundant) {</td></tr>
+<tr><td class="num" id="LN408">408</td><td class="line">		<span class='keyword'>int</span> opts = 0;</td></tr>
+<tr><td class="num" id="LN409">409</td><td class="line">		string_list_sort(&amp;names);</td></tr>
+<tr><td class="num" id="LN410">410</td><td class="line">		<span class='macro'>for_each_string_list_item(item, &amp;existing_packs)<span class='expansion'>for (item = (&amp;existing_packs)-&gt;items; item &lt; (&amp;<br>existing_packs)-&gt;items + (&amp;existing_packs)-&gt;nr; ++item<br>)</span></span> {</td></tr>
+<tr><td class="num" id="LN411">411</td><td class="line">			<span class='keyword'>char</span> *sha1;</td></tr>
+<tr><td class="num" id="LN412">412</td><td class="line">			size_t len = strlen(item-&gt;string);</td></tr>
+<tr><td class="num" id="LN413">413</td><td class="line">			<span class='keyword'>if</span> (len &lt; 40)</td></tr>
+<tr><td class="num" id="LN414">414</td><td class="line">				<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN415">415</td><td class="line">			sha1 = item-&gt;string + len - 40;</td></tr>
+<tr><td class="num" id="LN416">416</td><td class="line">			<span class='keyword'>if</span> (!string_list_has_string(&amp;names, sha1))</td></tr>
+<tr><td class="num" id="LN417">417</td><td class="line">				remove_redundant_pack(packdir, item-&gt;string);</td></tr>
+<tr><td class="num" id="LN418">418</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN419">419</td><td class="line">		<span class='keyword'>if</span> (!quiet &amp;&amp; isatty(2))</td></tr>
+<tr><td class="num" id="LN420">420</td><td class="line">			opts |= <span class='macro'>PRUNE_PACKED_VERBOSE<span class='expansion'>02</span></span>;</td></tr>
+<tr><td class="num" id="LN421">421</td><td class="line">		prune_packed_objects(opts);</td></tr>
+<tr><td class="num" id="LN422">422</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN423">423</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN424">424</td><td class="line">	<span class='keyword'>if</span> (!no_update_server_info)</td></tr>
+<tr><td class="num" id="LN425">425</td><td class="line">		update_server_info(0);</td></tr>
+<tr><td class="num" id="LN426">426</td><td class="line">	remove_temporary_files();</td></tr>
+<tr><td class="num" id="LN427">427</td><td class="line">	string_list_clear(&amp;names, 0);</td></tr>
+<tr><td class="num" id="LN428">428</td><td class="line">	string_list_clear(&amp;rollback, 0);</td></tr>
+<tr><td class="num" id="LN429">429</td><td class="line">	string_list_clear(&amp;existing_packs, 0);</td></tr>
+<tr><td class="num" id="LN430">430</td><td class="line">	strbuf_release(&amp;line);</td></tr>
+<tr><td class="num" id="LN431">431</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN432">432</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN433">433</td><td class="line">}</td></tr>
+</table></body></html>

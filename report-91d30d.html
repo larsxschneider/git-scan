@@ -1,0 +1,310 @@
+<!doctype html>
+<html>
+<head>
+<title>builtin/show-ref.c</title>
+<style type="text/css">
+ body { color:#000000; background-color:#ffffff }
+ body { font-family:Helvetica, sans-serif; font-size:10pt }
+ h1 { font-size:14pt }
+ .code { border-collapse:collapse; width:100%; }
+ .code { font-family: "Monospace", monospace; font-size:10pt }
+ .code { line-height: 1.2em }
+ .comment { color: green; font-style: oblique }
+ .keyword { color: blue }
+ .string_literal { color: red }
+ .directive { color: darkmagenta }
+ .expansion { display: none; }
+ .macro:hover .expansion { display: block; border: 2px solid #FF0000; padding: 2px; background-color:#FFF0F0; font-weight: normal;   -webkit-border-radius:5px;  -webkit-box-shadow:1px 1px 7px #000; position: absolute; top: -1em; left:10em; z-index: 1 } 
+ .macro { color: darkmagenta; background-color:LemonChiffon; position: relative }
+ .num { width:2.5em; padding-right:2ex; background-color:#eeeeee }
+ .num { text-align:right; font-size:8pt }
+ .num { color:#444444 }
+ .line { padding-left: 1ex; border-left: 3px solid #ccc }
+ .line { white-space: pre }
+ .msg { -webkit-box-shadow:1px 1px 7px #000 }
+ .msg { -webkit-border-radius:5px }
+ .msg { font-family:Helvetica, sans-serif; font-size:8pt }
+ .msg { float:left }
+ .msg { padding:0.25em 1ex 0.25em 1ex }
+ .msg { margin-top:10px; margin-bottom:10px }
+ .msg { font-weight:bold }
+ .msg { max-width:60em; word-wrap: break-word; white-space: pre-wrap }
+ .msgT { padding:0x; spacing:0x }
+ .msgEvent { background-color:#fff8b4; color:#000000 }
+ .msgControl { background-color:#bbbbbb; color:#000000 }
+ .mrange { background-color:#dfddf3 }
+ .mrange { border-bottom:1px solid #6F9DBE }
+ .PathIndex { font-weight: bold; padding:0px 5px; margin-right:5px; }
+ .PathIndex { -webkit-border-radius:8px }
+ .PathIndexEvent { background-color:#bfba87 }
+ .PathIndexControl { background-color:#8c8c8c }
+ .PathNav a { text-decoration:none; font-size: larger }
+ .CodeInsertionHint { font-weight: bold; background-color: #10dd10 }
+ .CodeRemovalHint { background-color:#de1010 }
+ .CodeRemovalHint { border-bottom:1px solid #6F9DBE }
+ table.simpletable {
+   padding: 5px;
+   font-size:12pt;
+   margin:20px;
+   border-collapse: collapse; border-spacing: 0px;
+ }
+ td.rowname {
+   text-align:right; font-weight:bold; color:#444444;
+   padding-right:2ex; }
+</style>
+</head>
+<body>
+<!-- BUGDESC Value stored to 'argc' is never read -->
+
+<!-- BUGTYPE Dead assignment -->
+
+<!-- BUGCATEGORY Dead store -->
+
+<!-- BUGFILE /Users/lars/Code/git/builtin/show-ref.c -->
+
+<!-- FILENAME show-ref.c -->
+
+<!-- FUNCTIONNAME cmd_show_ref -->
+
+<!-- ISSUEHASHCONTENTOFLINEINCONTEXT 4827bf1519acbee6a6fc9a21de9df979 -->
+
+<!-- BUGLINE 183 -->
+
+<!-- BUGCOLUMN 2 -->
+
+<!-- BUGPATHLENGTH 1 -->
+
+<!-- BUGMETAEND -->
+<!-- REPORTHEADER -->
+<h3>Bug Summary</h3>
+<table class="simpletable">
+<tr><td class="rowname">File:</td><td>builtin/show-ref.c</td></tr>
+<tr><td class="rowname">Location:</td><td><a href="#EndPath">line 183, column 2</a></td></tr>
+<tr><td class="rowname">Description:</td><td>Value stored to 'argc' is never read</td></tr>
+</table>
+<!-- REPORTSUMMARYEXTRA -->
+<h3>Annotated Source Code</h3>
+<table class="code">
+<tr><td class="num" id="LN1">1</td><td class="line"><span class='directive'>#include "builtin.h"</span></td></tr>
+<tr><td class="num" id="LN2">2</td><td class="line"><span class='directive'>#include "cache.h"</span></td></tr>
+<tr><td class="num" id="LN3">3</td><td class="line"><span class='directive'>#include "refs.h"</span></td></tr>
+<tr><td class="num" id="LN4">4</td><td class="line"><span class='directive'>#include "object.h"</span></td></tr>
+<tr><td class="num" id="LN5">5</td><td class="line"><span class='directive'>#include "tag.h"</span></td></tr>
+<tr><td class="num" id="LN6">6</td><td class="line"><span class='directive'>#include "string-list.h"</span></td></tr>
+<tr><td class="num" id="LN7">7</td><td class="line"><span class='directive'>#include "parse-options.h"</span></td></tr>
+<tr><td class="num" id="LN8">8</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN9">9</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> * <span class='keyword'>const</span> show_ref_usage[] = {</td></tr>
+<tr><td class="num" id="LN10">10</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git show-ref [-q | --quiet] [--verify] [--head] [-d | --dereference] [-s | --hash[=&lt;n&gt;]] [--abbrev[=&lt;n&gt;]] [--tags] [--heads] [--] [&lt;pattern&gt;...]"</span>)<span class='expansion'>("git show-ref [-q | --quiet] [--verify] [--head] [-d | --dereference] [-s | --hash[=&lt;n&gt;]] [--abbrev[=&lt;n&gt;]] [--tags] [--heads] [--] [&lt;pattern&gt;...]"<br>)</span></span>,</td></tr>
+<tr><td class="num" id="LN11">11</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git show-ref --exclude-existing[=&lt;pattern&gt;]"</span>)<span class='expansion'>("git show-ref --exclude-existing[=&lt;pattern&gt;]")</span></span>,</td></tr>
+<tr><td class="num" id="LN12">12</td><td class="line">	<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span></td></tr>
+<tr><td class="num" id="LN13">13</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN14">14</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN15">15</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> deref_tags, show_head, tags_only, heads_only, found_match, verify,</td></tr>
+<tr><td class="num" id="LN16">16</td><td class="line">	   quiet, hash_only, abbrev, exclude_arg;</td></tr>
+<tr><td class="num" id="LN17">17</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> **pattern;</td></tr>
+<tr><td class="num" id="LN18">18</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> *exclude_existing_arg;</td></tr>
+<tr><td class="num" id="LN19">19</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN20">20</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> show_one(<span class='keyword'>const</span> <span class='keyword'>char</span> *refname, <span class='keyword'>const</span> <span class='keyword'>struct</span> object_id *oid)</td></tr>
+<tr><td class="num" id="LN21">21</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN22">22</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *hex;</td></tr>
+<tr><td class="num" id="LN23">23</td><td class="line">	<span class='keyword'>struct</span> object_id peeled;</td></tr>
+<tr><td class="num" id="LN24">24</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN25">25</td><td class="line">	<span class='keyword'>if</span> (!has_sha1_file(oid-&gt;hash))</td></tr>
+<tr><td class="num" id="LN26">26</td><td class="line">		die(<span class='string_literal'>"git show-ref: bad ref %s (%s)"</span>, refname,</td></tr>
+<tr><td class="num" id="LN27">27</td><td class="line">		    oid_to_hex(oid));</td></tr>
+<tr><td class="num" id="LN28">28</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN29">29</td><td class="line">	<span class='keyword'>if</span> (quiet)</td></tr>
+<tr><td class="num" id="LN30">30</td><td class="line">		<span class='keyword'>return</span>;</td></tr>
+<tr><td class="num" id="LN31">31</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN32">32</td><td class="line">	hex = find_unique_abbrev(oid-&gt;hash, abbrev);</td></tr>
+<tr><td class="num" id="LN33">33</td><td class="line">	<span class='keyword'>if</span> (hash_only)</td></tr>
+<tr><td class="num" id="LN34">34</td><td class="line">		printf(<span class='string_literal'>"%s\n"</span>, hex);</td></tr>
+<tr><td class="num" id="LN35">35</td><td class="line">	<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN36">36</td><td class="line">		printf(<span class='string_literal'>"%s %s\n"</span>, hex, refname);</td></tr>
+<tr><td class="num" id="LN37">37</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN38">38</td><td class="line">	<span class='keyword'>if</span> (!deref_tags)</td></tr>
+<tr><td class="num" id="LN39">39</td><td class="line">		<span class='keyword'>return</span>;</td></tr>
+<tr><td class="num" id="LN40">40</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN41">41</td><td class="line">	<span class='keyword'>if</span> (!peel_ref(refname, peeled.hash)) {</td></tr>
+<tr><td class="num" id="LN42">42</td><td class="line">		hex = find_unique_abbrev(peeled.hash, abbrev);</td></tr>
+<tr><td class="num" id="LN43">43</td><td class="line">		printf(<span class='string_literal'>"%s %s^{}\n"</span>, hex, refname);</td></tr>
+<tr><td class="num" id="LN44">44</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN45">45</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN46">46</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN47">47</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> show_ref(<span class='keyword'>const</span> <span class='keyword'>char</span> *refname, <span class='keyword'>const</span> <span class='keyword'>struct</span> object_id *oid,</td></tr>
+<tr><td class="num" id="LN48">48</td><td class="line">		    <span class='keyword'>int</span> flag, <span class='keyword'>void</span> *cbdata)</td></tr>
+<tr><td class="num" id="LN49">49</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN50">50</td><td class="line">	<span class='keyword'>if</span> (show_head &amp;&amp; !strcmp(refname, <span class='string_literal'>"HEAD"</span>))</td></tr>
+<tr><td class="num" id="LN51">51</td><td class="line">		<span class='keyword'>goto</span> match;</td></tr>
+<tr><td class="num" id="LN52">52</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN53">53</td><td class="line">	<span class='keyword'>if</span> (tags_only || heads_only) {</td></tr>
+<tr><td class="num" id="LN54">54</td><td class="line">		<span class='keyword'>int</span> match;</td></tr>
+<tr><td class="num" id="LN55">55</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN56">56</td><td class="line">		match = heads_only &amp;&amp; starts_with(refname, <span class='string_literal'>"refs/heads/"</span>);</td></tr>
+<tr><td class="num" id="LN57">57</td><td class="line">		match |= tags_only &amp;&amp; starts_with(refname, <span class='string_literal'>"refs/tags/"</span>);</td></tr>
+<tr><td class="num" id="LN58">58</td><td class="line">		<span class='keyword'>if</span> (!match)</td></tr>
+<tr><td class="num" id="LN59">59</td><td class="line">			<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN60">60</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN61">61</td><td class="line">	<span class='keyword'>if</span> (pattern) {</td></tr>
+<tr><td class="num" id="LN62">62</td><td class="line">		<span class='keyword'>int</span> reflen = strlen(refname);</td></tr>
+<tr><td class="num" id="LN63">63</td><td class="line">		<span class='keyword'>const</span> <span class='keyword'>char</span> **p = pattern, *m;</td></tr>
+<tr><td class="num" id="LN64">64</td><td class="line">		<span class='keyword'>while</span> ((m = *p++) != <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>) {</td></tr>
+<tr><td class="num" id="LN65">65</td><td class="line">			<span class='keyword'>int</span> len = strlen(m);</td></tr>
+<tr><td class="num" id="LN66">66</td><td class="line">			<span class='keyword'>if</span> (len &gt; reflen)</td></tr>
+<tr><td class="num" id="LN67">67</td><td class="line">				<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN68">68</td><td class="line">			<span class='keyword'>if</span> (memcmp(m, refname + reflen - len, len))</td></tr>
+<tr><td class="num" id="LN69">69</td><td class="line">				<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN70">70</td><td class="line">			<span class='keyword'>if</span> (len == reflen)</td></tr>
+<tr><td class="num" id="LN71">71</td><td class="line">				<span class='keyword'>goto</span> match;</td></tr>
+<tr><td class="num" id="LN72">72</td><td class="line">			<span class='keyword'>if</span> (refname[reflen - len - 1] == '/')</td></tr>
+<tr><td class="num" id="LN73">73</td><td class="line">				<span class='keyword'>goto</span> match;</td></tr>
+<tr><td class="num" id="LN74">74</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN75">75</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN76">76</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN77">77</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN78">78</td><td class="line">match:</td></tr>
+<tr><td class="num" id="LN79">79</td><td class="line">	found_match++;</td></tr>
+<tr><td class="num" id="LN80">80</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN81">81</td><td class="line">	show_one(refname, oid);</td></tr>
+<tr><td class="num" id="LN82">82</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN83">83</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN84">84</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN85">85</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN86">86</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> add_existing(<span class='keyword'>const</span> <span class='keyword'>char</span> *refname, <span class='keyword'>const</span> <span class='keyword'>struct</span> object_id *oid,</td></tr>
+<tr><td class="num" id="LN87">87</td><td class="line">			<span class='keyword'>int</span> flag, <span class='keyword'>void</span> *cbdata)</td></tr>
+<tr><td class="num" id="LN88">88</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN89">89</td><td class="line">	<span class='keyword'>struct</span> string_list *list = (<span class='keyword'>struct</span> string_list *)cbdata;</td></tr>
+<tr><td class="num" id="LN90">90</td><td class="line">	string_list_insert(list, refname);</td></tr>
+<tr><td class="num" id="LN91">91</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN92">92</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN93">93</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN94">94</td><td class="line"><span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN95">95</td><td class="line"> <span class='comment'>* read "^(?:&lt;anything&gt;\s)?&lt;refname&gt;(?:\^\{\})?$" from the standard input,</span></td></tr>
+<tr><td class="num" id="LN96">96</td><td class="line"> <span class='comment'>* and</span></td></tr>
+<tr><td class="num" id="LN97">97</td><td class="line"> <span class='comment'>* (1) strip "^{}" at the end of line if any;</span></td></tr>
+<tr><td class="num" id="LN98">98</td><td class="line"> <span class='comment'>* (2) ignore if match is provided and does not head-match refname;</span></td></tr>
+<tr><td class="num" id="LN99">99</td><td class="line"> <span class='comment'>* (3) warn if refname is not a well-formed refname and skip;</span></td></tr>
+<tr><td class="num" id="LN100">100</td><td class="line"> <span class='comment'>* (4) ignore if refname is a ref that exists in the local repository;</span></td></tr>
+<tr><td class="num" id="LN101">101</td><td class="line"> <span class='comment'>* (5) otherwise output the line.</span></td></tr>
+<tr><td class="num" id="LN102">102</td><td class="line"> <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN103">103</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> exclude_existing(<span class='keyword'>const</span> <span class='keyword'>char</span> *match)</td></tr>
+<tr><td class="num" id="LN104">104</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN105">105</td><td class="line">	<span class='keyword'>static</span> <span class='keyword'>struct</span> string_list existing_refs = <span class='macro'>STRING_LIST_INIT_DUP<span class='expansion'>{ ((void*)0), 0, 0, 1, ((void*)0) }</span></span>;</td></tr>
+<tr><td class="num" id="LN106">106</td><td class="line">	<span class='keyword'>char</span> buf[1024];</td></tr>
+<tr><td class="num" id="LN107">107</td><td class="line">	<span class='keyword'>int</span> matchlen = match ? strlen(match) : 0;</td></tr>
+<tr><td class="num" id="LN108">108</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN109">109</td><td class="line">	for_each_ref(add_existing, &amp;existing_refs);</td></tr>
+<tr><td class="num" id="LN110">110</td><td class="line">	<span class='keyword'>while</span> (fgets(buf, <span class='keyword'>sizeof</span>(buf), <span class='macro'>stdin<span class='expansion'>__stdinp</span></span>)) {</td></tr>
+<tr><td class="num" id="LN111">111</td><td class="line">		<span class='keyword'>char</span> *ref;</td></tr>
+<tr><td class="num" id="LN112">112</td><td class="line">		<span class='keyword'>int</span> len = strlen(buf);</td></tr>
+<tr><td class="num" id="LN113">113</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN114">114</td><td class="line">		<span class='keyword'>if</span> (len &gt; 0 &amp;&amp; buf[len - 1] == '\n')</td></tr>
+<tr><td class="num" id="LN115">115</td><td class="line">			buf[--len] = '\0';</td></tr>
+<tr><td class="num" id="LN116">116</td><td class="line">		<span class='keyword'>if</span> (3 &lt;= len &amp;&amp; !strcmp(buf + len - 3, <span class='string_literal'>"^{}"</span>)) {</td></tr>
+<tr><td class="num" id="LN117">117</td><td class="line">			len -= 3;</td></tr>
+<tr><td class="num" id="LN118">118</td><td class="line">			buf[len] = '\0';</td></tr>
+<tr><td class="num" id="LN119">119</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN120">120</td><td class="line">		<span class='keyword'>for</span> (ref = buf + len; buf &lt; ref; ref--)</td></tr>
+<tr><td class="num" id="LN121">121</td><td class="line">			<span class='keyword'>if</span> (<span class='macro'>isspace(ref[-1])<span class='expansion'>((sane_ctype[(unsigned char)(ref[-1])] &amp; (0x01)) != 0)</span></span>)</td></tr>
+<tr><td class="num" id="LN122">122</td><td class="line">				<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN123">123</td><td class="line">		<span class='keyword'>if</span> (match) {</td></tr>
+<tr><td class="num" id="LN124">124</td><td class="line">			<span class='keyword'>int</span> reflen = buf + len - ref;</td></tr>
+<tr><td class="num" id="LN125">125</td><td class="line">			<span class='keyword'>if</span> (reflen &lt; matchlen)</td></tr>
+<tr><td class="num" id="LN126">126</td><td class="line">				<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN127">127</td><td class="line">			<span class='keyword'>if</span> (strncmp(ref, match, matchlen))</td></tr>
+<tr><td class="num" id="LN128">128</td><td class="line">				<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN129">129</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN130">130</td><td class="line">		<span class='keyword'>if</span> (check_refname_format(ref, 0)) {</td></tr>
+<tr><td class="num" id="LN131">131</td><td class="line">			warning(<span class='string_literal'>"ref '%s' ignored"</span>, ref);</td></tr>
+<tr><td class="num" id="LN132">132</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN133">133</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN134">134</td><td class="line">		<span class='keyword'>if</span> (!string_list_has_string(&amp;existing_refs, ref)) {</td></tr>
+<tr><td class="num" id="LN135">135</td><td class="line">			printf(<span class='string_literal'>"%s\n"</span>, buf);</td></tr>
+<tr><td class="num" id="LN136">136</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN137">137</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN138">138</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN139">139</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN140">140</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN141">141</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> hash_callback(<span class='keyword'>const</span> <span class='keyword'>struct</span> option *opt, <span class='keyword'>const</span> <span class='keyword'>char</span> *arg, <span class='keyword'>int</span> unset)</td></tr>
+<tr><td class="num" id="LN142">142</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN143">143</td><td class="line">	hash_only = 1;</td></tr>
+<tr><td class="num" id="LN144">144</td><td class="line">	<span class='comment'>/* Use full length SHA1 if no argument */</span></td></tr>
+<tr><td class="num" id="LN145">145</td><td class="line">	<span class='keyword'>if</span> (!arg)</td></tr>
+<tr><td class="num" id="LN146">146</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN147">147</td><td class="line">	<span class='keyword'>return</span> parse_opt_abbrev_cb(opt, arg, unset);</td></tr>
+<tr><td class="num" id="LN148">148</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN149">149</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN150">150</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> exclude_existing_callback(<span class='keyword'>const</span> <span class='keyword'>struct</span> option *opt, <span class='keyword'>const</span> <span class='keyword'>char</span> *arg,</td></tr>
+<tr><td class="num" id="LN151">151</td><td class="line">				     <span class='keyword'>int</span> unset)</td></tr>
+<tr><td class="num" id="LN152">152</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN153">153</td><td class="line">	exclude_arg = 1;</td></tr>
+<tr><td class="num" id="LN154">154</td><td class="line">	*(<span class='keyword'>const</span> <span class='keyword'>char</span> **)opt-&gt;value = arg;</td></tr>
+<tr><td class="num" id="LN155">155</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN156">156</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN157">157</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN158">158</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>struct</span> option show_ref_options[] = {</td></tr>
+<tr><td class="num" id="LN159">159</td><td class="line">	<span class='macro'>OPT_BOOL(0, <span class='string_literal'>"tags"</span>, &amp;tags_only, N_(<span class='string_literal'>"only show tags (can be combined with heads)"</span>))<span class='expansion'>{ OPTION_SET_INT, (0), ("tags"), (&amp;tags_only), ((void*)0)<br>, (("only show tags (can be combined with heads)")), PARSE_OPT_NOARG<br>, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN160">160</td><td class="line">	<span class='macro'>OPT_BOOL(0, <span class='string_literal'>"heads"</span>, &amp;heads_only, N_(<span class='string_literal'>"only show heads (can be combined with tags)"</span>))<span class='expansion'>{ OPTION_SET_INT, (0), ("heads"), (&amp;heads_only), ((void*)<br>0), (("only show heads (can be combined with tags)")), PARSE_OPT_NOARG<br>, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN161">161</td><td class="line">	<span class='macro'>OPT_BOOL(0, <span class='string_literal'>"verify"</span>, &amp;verify, N_(<span class='string_literal'>"stricter reference checking, "<span class='expansion'>{ OPTION_SET_INT, (0), ("verify"), (&amp;verify), ((void*)0),<br> (("stricter reference checking, " "requires exact ref path")<br>), PARSE_OPT_NOARG, ((void*)0), (1) }</span></span></span></td></tr>
+<tr><td class="num" id="LN162">162</td><td class="line">		    <span class='string_literal'><span class='macro'>"requires exact ref path"</span>))<span class='expansion'>{ OPTION_SET_INT, (0), ("verify"), (&amp;verify), ((void*)0),<br> (("stricter reference checking, " "requires exact ref path")<br>), PARSE_OPT_NOARG, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN163">163</td><td class="line">	<span class='macro'>OPT_HIDDEN_BOOL('h', NULL, &amp;show_head,<span class='expansion'>{ OPTION_SET_INT, ('h'), (((void*)0)), (&amp;show_head), ((void<br>*)0), (("show the HEAD reference, even if it would be filtered out"<br>)), PARSE_OPT_NOARG | PARSE_OPT_HIDDEN, ((void*)0), 1}</span></span></td></tr>
+<tr><td class="num" id="LN164">164</td><td class="line">			<span class='macro'>N_(<span class='string_literal'>"show the HEAD reference, even if it would be filtered out"</span>))<span class='expansion'>{ OPTION_SET_INT, ('h'), (((void*)0)), (&amp;show_head), ((void<br>*)0), (("show the HEAD reference, even if it would be filtered out"<br>)), PARSE_OPT_NOARG | PARSE_OPT_HIDDEN, ((void*)0), 1}</span></span>,</td></tr>
+<tr><td class="num" id="LN165">165</td><td class="line">	<span class='macro'>OPT_BOOL(0, <span class='string_literal'>"head"</span>, &amp;show_head,<span class='expansion'>{ OPTION_SET_INT, (0), ("head"), (&amp;show_head), ((void*)0)<br>, (("show the HEAD reference, even if it would be filtered out"<br>)), PARSE_OPT_NOARG, ((void*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN166">166</td><td class="line">	  <span class='macro'>N_(<span class='string_literal'>"show the HEAD reference, even if it would be filtered out"</span>))<span class='expansion'>{ OPTION_SET_INT, (0), ("head"), (&amp;show_head), ((void*)0)<br>, (("show the HEAD reference, even if it would be filtered out"<br>)), PARSE_OPT_NOARG, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN167">167</td><td class="line">	<span class='macro'>OPT_BOOL('d', <span class='string_literal'>"dereference"</span>, &amp;deref_tags,<span class='expansion'>{ OPTION_SET_INT, ('d'), ("dereference"), (&amp;deref_tags), (<br>(void*)0), (("dereference tags into object IDs")), PARSE_OPT_NOARG<br>, ((void*)0), (1) }</span></span></td></tr>
+<tr><td class="num" id="LN168">168</td><td class="line">		    <span class='macro'>N_(<span class='string_literal'>"dereference tags into object IDs"</span>))<span class='expansion'>{ OPTION_SET_INT, ('d'), ("dereference"), (&amp;deref_tags), (<br>(void*)0), (("dereference tags into object IDs")), PARSE_OPT_NOARG<br>, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN169">169</td><td class="line">	{ OPTION_CALLBACK, 's', <span class='string_literal'>"hash"</span>, &amp;abbrev, <span class='macro'>N_(<span class='string_literal'>"n"</span>)<span class='expansion'>("n")</span></span>,</td></tr>
+<tr><td class="num" id="LN170">170</td><td class="line">	  <span class='macro'>N_(<span class='string_literal'>"only show SHA1 hash using &lt;n&gt; digits"</span>)<span class='expansion'>("only show SHA1 hash using &lt;n&gt; digits")</span></span>,</td></tr>
+<tr><td class="num" id="LN171">171</td><td class="line">	  PARSE_OPT_OPTARG, &amp;hash_callback },</td></tr>
+<tr><td class="num" id="LN172">172</td><td class="line">	<span class='macro'>OPT__ABBREV(&amp;abbrev)<span class='expansion'>{ OPTION_CALLBACK, 0, "abbrev", (&amp;abbrev), ("n"), ("use &lt;n&gt; digits to display SHA-1s"<br>), PARSE_OPT_OPTARG, &amp;parse_opt_abbrev_cb, 0 }</span></span>,</td></tr>
+<tr><td class="num" id="LN173">173</td><td class="line">	<span class='macro'>OPT__QUIET(&amp;quiet,<span class='expansion'>{ OPTION_COUNTUP, ('q'), ("quiet"), ((&amp;quiet)), ((void*)0<br>), ((("do not print results to stdout (useful with --verify)"<br>))), PARSE_OPT_NOARG }</span></span></td></tr>
+<tr><td class="num" id="LN174">174</td><td class="line">		   <span class='macro'>N_(<span class='string_literal'>"do not print results to stdout (useful with --verify)"</span>))<span class='expansion'>{ OPTION_COUNTUP, ('q'), ("quiet"), ((&amp;quiet)), ((void*)0<br>), ((("do not print results to stdout (useful with --verify)"<br>))), PARSE_OPT_NOARG }</span></span>,</td></tr>
+<tr><td class="num" id="LN175">175</td><td class="line">	{ OPTION_CALLBACK, 0, <span class='string_literal'>"exclude-existing"</span>, &amp;exclude_existing_arg,</td></tr>
+<tr><td class="num" id="LN176">176</td><td class="line">	  <span class='macro'>N_(<span class='string_literal'>"pattern"</span>)<span class='expansion'>("pattern")</span></span>, <span class='macro'>N_(<span class='string_literal'>"show refs from stdin that aren't in local repository"</span>)<span class='expansion'>("show refs from stdin that aren't in local repository")</span></span>,</td></tr>
+<tr><td class="num" id="LN177">177</td><td class="line">	  PARSE_OPT_OPTARG | PARSE_OPT_NONEG, exclude_existing_callback },</td></tr>
+<tr><td class="num" id="LN178">178</td><td class="line">	<span class='macro'>OPT_END()<span class='expansion'>{ OPTION_END }</span></span></td></tr>
+<tr><td class="num" id="LN179">179</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN180">180</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN181">181</td><td class="line"><span class='keyword'>int</span> cmd_show_ref(<span class='keyword'>int</span> argc, <span class='keyword'>const</span> <span class='keyword'>char</span> **argv, <span class='keyword'>const</span> <span class='keyword'>char</span> *prefix)</td></tr>
+<tr><td class="num" id="LN182">182</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN183">183</td><td class="line">	argc = <span class="mrange">parse_options(argc, argv, prefix, show_ref_options,</td></tr></span>
+<tr><td class="num"></td><td class="line"><div id="EndPath" class="msg msgEvent" style="margin-left:9ex">Value stored to 'argc' is never read</div></td></tr>
+<tr><td class="num" id="LN184">184</td><td class="line">			     <span class="mrange">show_ref_usage, 0)</span>;</td></tr>
+<tr><td class="num" id="LN185">185</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN186">186</td><td class="line">	<span class='keyword'>if</span> (exclude_arg)</td></tr>
+<tr><td class="num" id="LN187">187</td><td class="line">		<span class='keyword'>return</span> exclude_existing(exclude_existing_arg);</td></tr>
+<tr><td class="num" id="LN188">188</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN189">189</td><td class="line">	pattern = argv;</td></tr>
+<tr><td class="num" id="LN190">190</td><td class="line">	<span class='keyword'>if</span> (!*pattern)</td></tr>
+<tr><td class="num" id="LN191">191</td><td class="line">		pattern = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN192">192</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN193">193</td><td class="line">	<span class='keyword'>if</span> (verify) {</td></tr>
+<tr><td class="num" id="LN194">194</td><td class="line">		<span class='keyword'>if</span> (!pattern)</td></tr>
+<tr><td class="num" id="LN195">195</td><td class="line">			die(<span class='string_literal'>"--verify requires a reference"</span>);</td></tr>
+<tr><td class="num" id="LN196">196</td><td class="line">		<span class='keyword'>while</span> (*pattern) {</td></tr>
+<tr><td class="num" id="LN197">197</td><td class="line">			<span class='keyword'>struct</span> object_id oid;</td></tr>
+<tr><td class="num" id="LN198">198</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN199">199</td><td class="line">			<span class='keyword'>if</span> ((starts_with(*pattern, <span class='string_literal'>"refs/"</span>) || !strcmp(*pattern, <span class='string_literal'>"HEAD"</span>)) &amp;&amp;</td></tr>
+<tr><td class="num" id="LN200">200</td><td class="line">			    !read_ref(*pattern, oid.hash)) {</td></tr>
+<tr><td class="num" id="LN201">201</td><td class="line">				show_one(*pattern, &amp;oid);</td></tr>
+<tr><td class="num" id="LN202">202</td><td class="line">			}</td></tr>
+<tr><td class="num" id="LN203">203</td><td class="line">			<span class='keyword'>else</span> <span class='keyword'>if</span> (!quiet)</td></tr>
+<tr><td class="num" id="LN204">204</td><td class="line">				die(<span class='string_literal'>"'%s' - not a valid ref"</span>, *pattern);</td></tr>
+<tr><td class="num" id="LN205">205</td><td class="line">			<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN206">206</td><td class="line">				<span class='keyword'>return</span> 1;</td></tr>
+<tr><td class="num" id="LN207">207</td><td class="line">			pattern++;</td></tr>
+<tr><td class="num" id="LN208">208</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN209">209</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN210">210</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN211">211</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN212">212</td><td class="line">	<span class='keyword'>if</span> (show_head)</td></tr>
+<tr><td class="num" id="LN213">213</td><td class="line">		head_ref(show_ref, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>);</td></tr>
+<tr><td class="num" id="LN214">214</td><td class="line">	for_each_ref(show_ref, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>);</td></tr>
+<tr><td class="num" id="LN215">215</td><td class="line">	<span class='keyword'>if</span> (!found_match) {</td></tr>
+<tr><td class="num" id="LN216">216</td><td class="line">		<span class='keyword'>if</span> (verify &amp;&amp; !quiet)</td></tr>
+<tr><td class="num" id="LN217">217</td><td class="line">			die(<span class='string_literal'>"No match"</span>);</td></tr>
+<tr><td class="num" id="LN218">218</td><td class="line">		<span class='keyword'>return</span> 1;</td></tr>
+<tr><td class="num" id="LN219">219</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN220">220</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN221">221</td><td class="line">}</td></tr>
+</table></body></html>

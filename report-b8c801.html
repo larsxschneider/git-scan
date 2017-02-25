@@ -1,0 +1,414 @@
+<!doctype html>
+<html>
+<head>
+<title>xdiff-interface.c</title>
+<style type="text/css">
+ body { color:#000000; background-color:#ffffff }
+ body { font-family:Helvetica, sans-serif; font-size:10pt }
+ h1 { font-size:14pt }
+ .code { border-collapse:collapse; width:100%; }
+ .code { font-family: "Monospace", monospace; font-size:10pt }
+ .code { line-height: 1.2em }
+ .comment { color: green; font-style: oblique }
+ .keyword { color: blue }
+ .string_literal { color: red }
+ .directive { color: darkmagenta }
+ .expansion { display: none; }
+ .macro:hover .expansion { display: block; border: 2px solid #FF0000; padding: 2px; background-color:#FFF0F0; font-weight: normal;   -webkit-border-radius:5px;  -webkit-box-shadow:1px 1px 7px #000; position: absolute; top: -1em; left:10em; z-index: 1 } 
+ .macro { color: darkmagenta; background-color:LemonChiffon; position: relative }
+ .num { width:2.5em; padding-right:2ex; background-color:#eeeeee }
+ .num { text-align:right; font-size:8pt }
+ .num { color:#444444 }
+ .line { padding-left: 1ex; border-left: 3px solid #ccc }
+ .line { white-space: pre }
+ .msg { -webkit-box-shadow:1px 1px 7px #000 }
+ .msg { -webkit-border-radius:5px }
+ .msg { font-family:Helvetica, sans-serif; font-size:8pt }
+ .msg { float:left }
+ .msg { padding:0.25em 1ex 0.25em 1ex }
+ .msg { margin-top:10px; margin-bottom:10px }
+ .msg { font-weight:bold }
+ .msg { max-width:60em; word-wrap: break-word; white-space: pre-wrap }
+ .msgT { padding:0x; spacing:0x }
+ .msgEvent { background-color:#fff8b4; color:#000000 }
+ .msgControl { background-color:#bbbbbb; color:#000000 }
+ .mrange { background-color:#dfddf3 }
+ .mrange { border-bottom:1px solid #6F9DBE }
+ .PathIndex { font-weight: bold; padding:0px 5px; margin-right:5px; }
+ .PathIndex { -webkit-border-radius:8px }
+ .PathIndexEvent { background-color:#bfba87 }
+ .PathIndexControl { background-color:#8c8c8c }
+ .PathNav a { text-decoration:none; font-size: larger }
+ .CodeInsertionHint { font-weight: bold; background-color: #10dd10 }
+ .CodeRemovalHint { background-color:#de1010 }
+ .CodeRemovalHint { border-bottom:1px solid #6F9DBE }
+ table.simpletable {
+   padding: 5px;
+   font-size:12pt;
+   margin:20px;
+   border-collapse: collapse; border-spacing: 0px;
+ }
+ td.rowname {
+   text-align:right; font-weight:bold; color:#444444;
+   padding-right:2ex; }
+</style>
+</head>
+<body>
+<!-- BUGDESC Dereference of null pointer (loaded from variable 'value') -->
+
+<!-- BUGTYPE Dereference of null pointer -->
+
+<!-- BUGCATEGORY Logic error -->
+
+<!-- BUGFILE /Users/lars/Code/git/xdiff-interface.c -->
+
+<!-- FILENAME xdiff-interface.c -->
+
+<!-- FUNCTIONNAME xdiff_set_find_func -->
+
+<!-- ISSUEHASHCONTENTOFLINEINCONTEXT 06324be0114f66c55faf264f19a16ae4 -->
+
+<!-- BUGLINE 267 -->
+
+<!-- BUGCOLUMN 18 -->
+
+<!-- BUGPATHLENGTH 11 -->
+
+<!-- BUGMETAEND -->
+<!-- REPORTHEADER -->
+<h3>Bug Summary</h3>
+<table class="simpletable">
+<tr><td class="rowname">File:</td><td>xdiff-interface.c</td></tr>
+<tr><td class="rowname">Location:</td><td><a href="#EndPath">line 267, column 18</a></td></tr>
+<tr><td class="rowname">Description:</td><td>Dereference of null pointer (loaded from variable 'value')</td></tr>
+</table>
+<!-- REPORTSUMMARYEXTRA -->
+<h3>Annotated Source Code</h3>
+<table class="code">
+<tr><td class="num" id="LN1">1</td><td class="line"><span class='directive'>#include "cache.h"</span></td></tr>
+<tr><td class="num" id="LN2">2</td><td class="line"><span class='directive'>#include "xdiff-interface.h"</span></td></tr>
+<tr><td class="num" id="LN3">3</td><td class="line"><span class='directive'>#include "xdiff/xtypes.h"</span></td></tr>
+<tr><td class="num" id="LN4">4</td><td class="line"><span class='directive'>#include "xdiff/xdiffi.h"</span></td></tr>
+<tr><td class="num" id="LN5">5</td><td class="line"><span class='directive'>#include "xdiff/xemit.h"</span></td></tr>
+<tr><td class="num" id="LN6">6</td><td class="line"><span class='directive'>#include "xdiff/xmacros.h"</span></td></tr>
+<tr><td class="num" id="LN7">7</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN8">8</td><td class="line"><span class='keyword'>struct</span> xdiff_emit_state {</td></tr>
+<tr><td class="num" id="LN9">9</td><td class="line">	xdiff_emit_consume_fn consume;</td></tr>
+<tr><td class="num" id="LN10">10</td><td class="line">	<span class='keyword'>void</span> *consume_callback_data;</td></tr>
+<tr><td class="num" id="LN11">11</td><td class="line">	<span class='keyword'>struct</span> strbuf remainder;</td></tr>
+<tr><td class="num" id="LN12">12</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN13">13</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN14">14</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> parse_num(<span class='keyword'>char</span> **cp_p, <span class='keyword'>int</span> *num_p)</td></tr>
+<tr><td class="num" id="LN15">15</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN16">16</td><td class="line">	<span class='keyword'>char</span> *cp = *cp_p;</td></tr>
+<tr><td class="num" id="LN17">17</td><td class="line">	<span class='keyword'>int</span> num = 0;</td></tr>
+<tr><td class="num" id="LN18">18</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN19">19</td><td class="line">	<span class='keyword'>while</span> ('0' &lt;= *cp &amp;&amp; *cp &lt;= '9')</td></tr>
+<tr><td class="num" id="LN20">20</td><td class="line">		num = num * 10 + *cp++ - '0';</td></tr>
+<tr><td class="num" id="LN21">21</td><td class="line">	<span class='keyword'>if</span> (!(cp - *cp_p))</td></tr>
+<tr><td class="num" id="LN22">22</td><td class="line">		<span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN23">23</td><td class="line">	*cp_p = cp;</td></tr>
+<tr><td class="num" id="LN24">24</td><td class="line">	*num_p = num;</td></tr>
+<tr><td class="num" id="LN25">25</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN26">26</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN27">27</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN28">28</td><td class="line"><span class='keyword'>int</span> parse_hunk_header(<span class='keyword'>char</span> *line, <span class='keyword'>int</span> len,</td></tr>
+<tr><td class="num" id="LN29">29</td><td class="line">		      <span class='keyword'>int</span> *ob, <span class='keyword'>int</span> *on,</td></tr>
+<tr><td class="num" id="LN30">30</td><td class="line">		      <span class='keyword'>int</span> *nb, <span class='keyword'>int</span> *nn)</td></tr>
+<tr><td class="num" id="LN31">31</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN32">32</td><td class="line">	<span class='keyword'>char</span> *cp;</td></tr>
+<tr><td class="num" id="LN33">33</td><td class="line">	cp = line + 4;</td></tr>
+<tr><td class="num" id="LN34">34</td><td class="line">	<span class='keyword'>if</span> (parse_num(&amp;cp, ob)) {</td></tr>
+<tr><td class="num" id="LN35">35</td><td class="line">	bad_line:</td></tr>
+<tr><td class="num" id="LN36">36</td><td class="line">		<span class='keyword'>return</span> <span class='macro'>error(<span class='string_literal'>"malformed diff output: %s"</span>, line)<span class='expansion'>(error("malformed diff output: %s", line), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN37">37</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN38">38</td><td class="line">	<span class='keyword'>if</span> (*cp == ',') {</td></tr>
+<tr><td class="num" id="LN39">39</td><td class="line">		cp++;</td></tr>
+<tr><td class="num" id="LN40">40</td><td class="line">		<span class='keyword'>if</span> (parse_num(&amp;cp, on))</td></tr>
+<tr><td class="num" id="LN41">41</td><td class="line">			<span class='keyword'>goto</span> bad_line;</td></tr>
+<tr><td class="num" id="LN42">42</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN43">43</td><td class="line">	<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN44">44</td><td class="line">		*on = 1;</td></tr>
+<tr><td class="num" id="LN45">45</td><td class="line">	<span class='keyword'>if</span> (*cp++ != ' ' || *cp++ != '+')</td></tr>
+<tr><td class="num" id="LN46">46</td><td class="line">		<span class='keyword'>goto</span> bad_line;</td></tr>
+<tr><td class="num" id="LN47">47</td><td class="line">	<span class='keyword'>if</span> (parse_num(&amp;cp, nb))</td></tr>
+<tr><td class="num" id="LN48">48</td><td class="line">		<span class='keyword'>goto</span> bad_line;</td></tr>
+<tr><td class="num" id="LN49">49</td><td class="line">	<span class='keyword'>if</span> (*cp == ',') {</td></tr>
+<tr><td class="num" id="LN50">50</td><td class="line">		cp++;</td></tr>
+<tr><td class="num" id="LN51">51</td><td class="line">		<span class='keyword'>if</span> (parse_num(&amp;cp, nn))</td></tr>
+<tr><td class="num" id="LN52">52</td><td class="line">			<span class='keyword'>goto</span> bad_line;</td></tr>
+<tr><td class="num" id="LN53">53</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN54">54</td><td class="line">	<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN55">55</td><td class="line">		*nn = 1;</td></tr>
+<tr><td class="num" id="LN56">56</td><td class="line">	<span class='keyword'>return</span> -!!memcmp(cp, <span class='string_literal'>" @@"</span>, 3);</td></tr>
+<tr><td class="num" id="LN57">57</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN58">58</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN59">59</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> consume_one(<span class='keyword'>void</span> *priv_, <span class='keyword'>char</span> *s, <span class='keyword'>unsigned</span> <span class='keyword'>long</span> size)</td></tr>
+<tr><td class="num" id="LN60">60</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN61">61</td><td class="line">	<span class='keyword'>struct</span> xdiff_emit_state *priv = priv_;</td></tr>
+<tr><td class="num" id="LN62">62</td><td class="line">	<span class='keyword'>char</span> *ep;</td></tr>
+<tr><td class="num" id="LN63">63</td><td class="line">	<span class='keyword'>while</span> (size) {</td></tr>
+<tr><td class="num" id="LN64">64</td><td class="line">		<span class='keyword'>unsigned</span> <span class='keyword'>long</span> this_size;</td></tr>
+<tr><td class="num" id="LN65">65</td><td class="line">		ep = memchr(s, '\n', size);</td></tr>
+<tr><td class="num" id="LN66">66</td><td class="line">		this_size = (ep == <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>) ? size : (ep - s + 1);</td></tr>
+<tr><td class="num" id="LN67">67</td><td class="line">		priv-&gt;consume(priv-&gt;consume_callback_data, s, this_size);</td></tr>
+<tr><td class="num" id="LN68">68</td><td class="line">		size -= this_size;</td></tr>
+<tr><td class="num" id="LN69">69</td><td class="line">		s += this_size;</td></tr>
+<tr><td class="num" id="LN70">70</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN71">71</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN72">72</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN73">73</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> xdiff_outf(<span class='keyword'>void</span> *priv_, mmbuffer_t *mb, <span class='keyword'>int</span> nbuf)</td></tr>
+<tr><td class="num" id="LN74">74</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN75">75</td><td class="line">	<span class='keyword'>struct</span> xdiff_emit_state *priv = priv_;</td></tr>
+<tr><td class="num" id="LN76">76</td><td class="line">	<span class='keyword'>int</span> i;</td></tr>
+<tr><td class="num" id="LN77">77</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN78">78</td><td class="line">	<span class='keyword'>for</span> (i = 0; i &lt; nbuf; i++) {</td></tr>
+<tr><td class="num" id="LN79">79</td><td class="line">		<span class='keyword'>if</span> (mb[i].ptr[mb[i].size-1] != '\n') {</td></tr>
+<tr><td class="num" id="LN80">80</td><td class="line">			<span class='comment'>/* Incomplete line */</span></td></tr>
+<tr><td class="num" id="LN81">81</td><td class="line">			strbuf_add(&amp;priv-&gt;remainder, mb[i].ptr, mb[i].size);</td></tr>
+<tr><td class="num" id="LN82">82</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN83">83</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN84">84</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN85">85</td><td class="line">		<span class='comment'>/* we have a complete line */</span></td></tr>
+<tr><td class="num" id="LN86">86</td><td class="line">		<span class='keyword'>if</span> (!priv-&gt;remainder.len) {</td></tr>
+<tr><td class="num" id="LN87">87</td><td class="line">			consume_one(priv, mb[i].ptr, mb[i].size);</td></tr>
+<tr><td class="num" id="LN88">88</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN89">89</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN90">90</td><td class="line">		strbuf_add(&amp;priv-&gt;remainder, mb[i].ptr, mb[i].size);</td></tr>
+<tr><td class="num" id="LN91">91</td><td class="line">		consume_one(priv, priv-&gt;remainder.buf, priv-&gt;remainder.len);</td></tr>
+<tr><td class="num" id="LN92">92</td><td class="line">		<span class='macro'>strbuf_reset(&amp;priv-&gt;remainder)<span class='expansion'>strbuf_setlen(&amp;priv-&gt;remainder, 0)</span></span>;</td></tr>
+<tr><td class="num" id="LN93">93</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN94">94</td><td class="line">	<span class='keyword'>if</span> (priv-&gt;remainder.len) {</td></tr>
+<tr><td class="num" id="LN95">95</td><td class="line">		consume_one(priv, priv-&gt;remainder.buf, priv-&gt;remainder.len);</td></tr>
+<tr><td class="num" id="LN96">96</td><td class="line">		<span class='macro'>strbuf_reset(&amp;priv-&gt;remainder)<span class='expansion'>strbuf_setlen(&amp;priv-&gt;remainder, 0)</span></span>;</td></tr>
+<tr><td class="num" id="LN97">97</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN98">98</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN99">99</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN100">100</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN101">101</td><td class="line"><span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN102">102</td><td class="line"> <span class='comment'>* Trim down common substring at the end of the buffers,</span></td></tr>
+<tr><td class="num" id="LN103">103</td><td class="line"> <span class='comment'>* but end on a complete line.</span></td></tr>
+<tr><td class="num" id="LN104">104</td><td class="line"> <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN105">105</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> trim_common_tail(mmfile_t *a, mmfile_t *b)</td></tr>
+<tr><td class="num" id="LN106">106</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN107">107</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>int</span> blk = 1024;</td></tr>
+<tr><td class="num" id="LN108">108</td><td class="line">	<span class='keyword'>long</span> trimmed = 0, recovered = 0;</td></tr>
+<tr><td class="num" id="LN109">109</td><td class="line">	<span class='keyword'>char</span> *ap = a-&gt;ptr + a-&gt;size;</td></tr>
+<tr><td class="num" id="LN110">110</td><td class="line">	<span class='keyword'>char</span> *bp = b-&gt;ptr + b-&gt;size;</td></tr>
+<tr><td class="num" id="LN111">111</td><td class="line">	<span class='keyword'>long</span> smaller = (a-&gt;size &lt; b-&gt;size) ? a-&gt;size : b-&gt;size;</td></tr>
+<tr><td class="num" id="LN112">112</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN113">113</td><td class="line">	<span class='keyword'>while</span> (blk + trimmed &lt;= smaller &amp;&amp; !memcmp(ap - blk, bp - blk, blk)) {</td></tr>
+<tr><td class="num" id="LN114">114</td><td class="line">		trimmed += blk;</td></tr>
+<tr><td class="num" id="LN115">115</td><td class="line">		ap -= blk;</td></tr>
+<tr><td class="num" id="LN116">116</td><td class="line">		bp -= blk;</td></tr>
+<tr><td class="num" id="LN117">117</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN118">118</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN119">119</td><td class="line">	<span class='keyword'>while</span> (recovered &lt; trimmed)</td></tr>
+<tr><td class="num" id="LN120">120</td><td class="line">		<span class='keyword'>if</span> (ap[recovered++] == '\n')</td></tr>
+<tr><td class="num" id="LN121">121</td><td class="line">			<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN122">122</td><td class="line">	a-&gt;size -= trimmed - recovered;</td></tr>
+<tr><td class="num" id="LN123">123</td><td class="line">	b-&gt;size -= trimmed - recovered;</td></tr>
+<tr><td class="num" id="LN124">124</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN125">125</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN126">126</td><td class="line"><span class='keyword'>int</span> xdi_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t <span class='keyword'>const</span> *xpp, xdemitconf_t <span class='keyword'>const</span> *xecfg, xdemitcb_t *xecb)</td></tr>
+<tr><td class="num" id="LN127">127</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN128">128</td><td class="line">	mmfile_t a = *mf1;</td></tr>
+<tr><td class="num" id="LN129">129</td><td class="line">	mmfile_t b = *mf2;</td></tr>
+<tr><td class="num" id="LN130">130</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN131">131</td><td class="line">	<span class='keyword'>if</span> (mf1-&gt;size &gt; <span class='macro'>MAX_XDIFF_SIZE<span class='expansion'>(1024UL * 1024 * 1023)</span></span> || mf2-&gt;size &gt; <span class='macro'>MAX_XDIFF_SIZE<span class='expansion'>(1024UL * 1024 * 1023)</span></span>)</td></tr>
+<tr><td class="num" id="LN132">132</td><td class="line">		<span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN133">133</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN134">134</td><td class="line">	<span class='keyword'>if</span> (!xecfg-&gt;ctxlen &amp;&amp; !(xecfg-&gt;flags &amp; <span class='macro'>XDL_EMIT_FUNCCONTEXT<span class='expansion'>(1 &lt;&lt; 2)</span></span>))</td></tr>
+<tr><td class="num" id="LN135">135</td><td class="line">		trim_common_tail(&amp;a, &amp;b);</td></tr>
+<tr><td class="num" id="LN136">136</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN137">137</td><td class="line">	<span class='keyword'>return</span> xdl_diff(&amp;a, &amp;b, xpp, xecfg, xecb);</td></tr>
+<tr><td class="num" id="LN138">138</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN139">139</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN140">140</td><td class="line"><span class='keyword'>int</span> xdi_diff_outf(mmfile_t *mf1, mmfile_t *mf2,</td></tr>
+<tr><td class="num" id="LN141">141</td><td class="line">		  xdiff_emit_consume_fn fn, <span class='keyword'>void</span> *consume_callback_data,</td></tr>
+<tr><td class="num" id="LN142">142</td><td class="line">		  xpparam_t <span class='keyword'>const</span> *xpp, xdemitconf_t <span class='keyword'>const</span> *xecfg)</td></tr>
+<tr><td class="num" id="LN143">143</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN144">144</td><td class="line">	<span class='keyword'>int</span> ret;</td></tr>
+<tr><td class="num" id="LN145">145</td><td class="line">	<span class='keyword'>struct</span> xdiff_emit_state state;</td></tr>
+<tr><td class="num" id="LN146">146</td><td class="line">	xdemitcb_t ecb;</td></tr>
+<tr><td class="num" id="LN147">147</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN148">148</td><td class="line">	<span class='macro'>memset(&amp;state, 0, <span class='keyword'>sizeof</span>(state))<span class='expansion'>__builtin___memset_chk (&amp;state, 0, sizeof(state), __builtin_object_size<br> (&amp;state, 0))</span></span>;</td></tr>
+<tr><td class="num" id="LN149">149</td><td class="line">	state.consume = fn;</td></tr>
+<tr><td class="num" id="LN150">150</td><td class="line">	state.consume_callback_data = consume_callback_data;</td></tr>
+<tr><td class="num" id="LN151">151</td><td class="line">	<span class='macro'>memset(&amp;ecb, 0, <span class='keyword'>sizeof</span>(ecb))<span class='expansion'>__builtin___memset_chk (&amp;ecb, 0, sizeof(ecb), __builtin_object_size<br> (&amp;ecb, 0))</span></span>;</td></tr>
+<tr><td class="num" id="LN152">152</td><td class="line">	ecb.outf = xdiff_outf;</td></tr>
+<tr><td class="num" id="LN153">153</td><td class="line">	ecb.priv = &amp;state;</td></tr>
+<tr><td class="num" id="LN154">154</td><td class="line">	strbuf_init(&amp;state.remainder, 0);</td></tr>
+<tr><td class="num" id="LN155">155</td><td class="line">	ret = xdi_diff(mf1, mf2, xpp, xecfg, &amp;ecb);</td></tr>
+<tr><td class="num" id="LN156">156</td><td class="line">	strbuf_release(&amp;state.remainder);</td></tr>
+<tr><td class="num" id="LN157">157</td><td class="line">	<span class='keyword'>return</span> ret;</td></tr>
+<tr><td class="num" id="LN158">158</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN159">159</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN160">160</td><td class="line"><span class='keyword'>int</span> read_mmfile(mmfile_t *ptr, <span class='keyword'>const</span> <span class='keyword'>char</span> *filename)</td></tr>
+<tr><td class="num" id="LN161">161</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN162">162</td><td class="line">	<span class='keyword'>struct</span> stat st;</td></tr>
+<tr><td class="num" id="LN163">163</td><td class="line">	FILE *f;</td></tr>
+<tr><td class="num" id="LN164">164</td><td class="line">	size_t sz;</td></tr>
+<tr><td class="num" id="LN165">165</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN166">166</td><td class="line">	<span class='keyword'>if</span> (stat(filename, &amp;st))</td></tr>
+<tr><td class="num" id="LN167">167</td><td class="line">		<span class='keyword'>return</span> <span class='macro'>error(<span class='string_literal'>"Could not stat %s"</span>, filename)<span class='expansion'>(error("Could not stat %s", filename), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN168">168</td><td class="line">	<span class='keyword'>if</span> ((f = fopen(filename, <span class='string_literal'>"rb"</span>)) == <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>)</td></tr>
+<tr><td class="num" id="LN169">169</td><td class="line">		<span class='keyword'>return</span> <span class='macro'>error(<span class='string_literal'>"Could not open %s"</span>, filename)<span class='expansion'>(error("Could not open %s", filename), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN170">170</td><td class="line">	sz = xsize_t(st.st_size);</td></tr>
+<tr><td class="num" id="LN171">171</td><td class="line">	ptr-&gt;ptr = xmalloc(sz ? sz : 1);</td></tr>
+<tr><td class="num" id="LN172">172</td><td class="line">	<span class='keyword'>if</span> (sz &amp;&amp; fread(ptr-&gt;ptr, sz, 1, f) != 1) {</td></tr>
+<tr><td class="num" id="LN173">173</td><td class="line">		fclose(f);</td></tr>
+<tr><td class="num" id="LN174">174</td><td class="line">		<span class='keyword'>return</span> <span class='macro'>error(<span class='string_literal'>"Could not read %s"</span>, filename)<span class='expansion'>(error("Could not read %s", filename), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN175">175</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN176">176</td><td class="line">	fclose(f);</td></tr>
+<tr><td class="num" id="LN177">177</td><td class="line">	ptr-&gt;size = sz;</td></tr>
+<tr><td class="num" id="LN178">178</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN179">179</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN180">180</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN181">181</td><td class="line"><span class='keyword'>void</span> read_mmblob(mmfile_t *ptr, <span class='keyword'>const</span> <span class='keyword'>struct</span> object_id *oid)</td></tr>
+<tr><td class="num" id="LN182">182</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN183">183</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>long</span> size;</td></tr>
+<tr><td class="num" id="LN184">184</td><td class="line">	<span class='keyword'>enum</span> object_type type;</td></tr>
+<tr><td class="num" id="LN185">185</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN186">186</td><td class="line">	<span class='keyword'>if</span> (!oidcmp(oid, &amp;null_oid)) {</td></tr>
+<tr><td class="num" id="LN187">187</td><td class="line">		ptr-&gt;ptr = xstrdup(<span class='string_literal'>""</span>);</td></tr>
+<tr><td class="num" id="LN188">188</td><td class="line">		ptr-&gt;size = 0;</td></tr>
+<tr><td class="num" id="LN189">189</td><td class="line">		<span class='keyword'>return</span>;</td></tr>
+<tr><td class="num" id="LN190">190</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN191">191</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN192">192</td><td class="line">	ptr-&gt;ptr = read_sha1_file(oid-&gt;hash, &amp;type, &amp;size);</td></tr>
+<tr><td class="num" id="LN193">193</td><td class="line">	<span class='keyword'>if</span> (!ptr-&gt;ptr || type != OBJ_BLOB)</td></tr>
+<tr><td class="num" id="LN194">194</td><td class="line">		die(<span class='string_literal'>"unable to read blob object %s"</span>, oid_to_hex(oid));</td></tr>
+<tr><td class="num" id="LN195">195</td><td class="line">	ptr-&gt;size = size;</td></tr>
+<tr><td class="num" id="LN196">196</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN197">197</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN198">198</td><td class="line"><span class='directive'>#define <span class='macro'>FIRST_FEW_BYTES<span class='expansion'>8000</span></span> 8000</span></td></tr>
+<tr><td class="num" id="LN199">199</td><td class="line"><span class='keyword'>int</span> buffer_is_binary(<span class='keyword'>const</span> <span class='keyword'>char</span> *ptr, <span class='keyword'>unsigned</span> <span class='keyword'>long</span> size)</td></tr>
+<tr><td class="num" id="LN200">200</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN201">201</td><td class="line">	<span class='keyword'>if</span> (<span class='macro'>FIRST_FEW_BYTES<span class='expansion'>8000</span></span> &lt; size)</td></tr>
+<tr><td class="num" id="LN202">202</td><td class="line">		size = <span class='macro'>FIRST_FEW_BYTES<span class='expansion'>8000</span></span>;</td></tr>
+<tr><td class="num" id="LN203">203</td><td class="line">	<span class='keyword'>return</span> !!memchr(ptr, 0, size);</td></tr>
+<tr><td class="num" id="LN204">204</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN205">205</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN206">206</td><td class="line"><span class='keyword'>struct</span> ff_regs {</td></tr>
+<tr><td class="num" id="LN207">207</td><td class="line">	<span class='keyword'>int</span> nr;</td></tr>
+<tr><td class="num" id="LN208">208</td><td class="line">	<span class='keyword'>struct</span> ff_reg {</td></tr>
+<tr><td class="num" id="LN209">209</td><td class="line">		regex_t re;</td></tr>
+<tr><td class="num" id="LN210">210</td><td class="line">		<span class='keyword'>int</span> negate;</td></tr>
+<tr><td class="num" id="LN211">211</td><td class="line">	} *array;</td></tr>
+<tr><td class="num" id="LN212">212</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN213">213</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN214">214</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>long</span> ff_regexp(<span class='keyword'>const</span> <span class='keyword'>char</span> *line, <span class='keyword'>long</span> len,</td></tr>
+<tr><td class="num" id="LN215">215</td><td class="line">		<span class='keyword'>char</span> *buffer, <span class='keyword'>long</span> buffer_size, <span class='keyword'>void</span> *priv)</td></tr>
+<tr><td class="num" id="LN216">216</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN217">217</td><td class="line">	<span class='keyword'>struct</span> ff_regs *regs = priv;</td></tr>
+<tr><td class="num" id="LN218">218</td><td class="line">	regmatch_t pmatch[2];</td></tr>
+<tr><td class="num" id="LN219">219</td><td class="line">	<span class='keyword'>int</span> i;</td></tr>
+<tr><td class="num" id="LN220">220</td><td class="line">	<span class='keyword'>int</span> result;</td></tr>
+<tr><td class="num" id="LN221">221</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN222">222</td><td class="line">	<span class='comment'>/* Exclude terminating newline (and cr) from matching */</span></td></tr>
+<tr><td class="num" id="LN223">223</td><td class="line">	<span class='keyword'>if</span> (len &gt; 0 &amp;&amp; line[len-1] == '\n') {</td></tr>
+<tr><td class="num" id="LN224">224</td><td class="line">		<span class='keyword'>if</span> (len &gt; 1 &amp;&amp; line[len-2] == '\r')</td></tr>
+<tr><td class="num" id="LN225">225</td><td class="line">			len -= 2;</td></tr>
+<tr><td class="num" id="LN226">226</td><td class="line">		<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN227">227</td><td class="line">			len--;</td></tr>
+<tr><td class="num" id="LN228">228</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN229">229</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN230">230</td><td class="line">	<span class='keyword'>for</span> (i = 0; i &lt; regs-&gt;nr; i++) {</td></tr>
+<tr><td class="num" id="LN231">231</td><td class="line">		<span class='keyword'>struct</span> ff_reg *reg = regs-&gt;array + i;</td></tr>
+<tr><td class="num" id="LN232">232</td><td class="line">		<span class='keyword'>if</span> (!regexec_buf(&amp;reg-&gt;re, line, len, 2, pmatch, 0)) {</td></tr>
+<tr><td class="num" id="LN233">233</td><td class="line">			<span class='keyword'>if</span> (reg-&gt;negate)</td></tr>
+<tr><td class="num" id="LN234">234</td><td class="line">				<span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN235">235</td><td class="line">			<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN236">236</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN237">237</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN238">238</td><td class="line">	<span class='keyword'>if</span> (regs-&gt;nr &lt;= i)</td></tr>
+<tr><td class="num" id="LN239">239</td><td class="line">		<span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN240">240</td><td class="line">	i = pmatch[1].rm_so &gt;= 0 ? 1 : 0;</td></tr>
+<tr><td class="num" id="LN241">241</td><td class="line">	line += pmatch[i].rm_so;</td></tr>
+<tr><td class="num" id="LN242">242</td><td class="line">	result = pmatch[i].rm_eo - pmatch[i].rm_so;</td></tr>
+<tr><td class="num" id="LN243">243</td><td class="line">	<span class='keyword'>if</span> (result &gt; buffer_size)</td></tr>
+<tr><td class="num" id="LN244">244</td><td class="line">		result = buffer_size;</td></tr>
+<tr><td class="num" id="LN245">245</td><td class="line">	<span class='keyword'>while</span> (result &gt; 0 &amp;&amp; (<span class='macro'>isspace(line[result - 1])<span class='expansion'>((sane_ctype[(unsigned char)(line[result - 1])] &amp; (0x01))<br> != 0)</span></span>))</td></tr>
+<tr><td class="num" id="LN246">246</td><td class="line">		result--;</td></tr>
+<tr><td class="num" id="LN247">247</td><td class="line">	<span class='macro'>memcpy(buffer, line, result)<span class='expansion'>__builtin___memcpy_chk (buffer, line, result, __builtin_object_size<br> (buffer, 0))</span></span>;</td></tr>
+<tr><td class="num" id="LN248">248</td><td class="line">	<span class='keyword'>return</span> result;</td></tr>
+<tr><td class="num" id="LN249">249</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN250">250</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN251">251</td><td class="line"><span class='keyword'>void</span> xdiff_set_find_func(xdemitconf_t *xecfg, <span class='keyword'>const</span> <span class='keyword'>char</span> *value, <span class='keyword'>int</span> cflags)</td></tr>
+<tr><td class="num" id="LN252">252</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN253">253</td><td class="line">	<span class='keyword'>int</span> i;</td></tr>
+<tr><td class="num" id="LN254">254</td><td class="line">	<span class='keyword'>struct</span> ff_regs *regs;</td></tr>
+<tr><td class="num" id="LN255">255</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN256">256</td><td class="line">	xecfg-&gt;find_func = ff_regexp;</td></tr>
+<tr><td class="num" id="LN257">257</td><td class="line">	regs = xecfg-&gt;find_func_priv = xmalloc(<span class='keyword'>sizeof</span>(<span class='keyword'>struct</span> ff_regs));</td></tr>
+<tr><td class="num" id="LN258">258</td><td class="line">	<span class='keyword'>for</span> (i = 0, regs-&gt;nr = 1; value[i]; i++)</td></tr>
+<tr><td class="num"></td><td class="line"><div id="Path1" class="msg msgControl" style="margin-left:9ex"><table class="msgT"><tr><td valign="top"><div class="PathIndex PathIndexControl">1</div></td><td>Loop condition is true.  Entering loop body</td><td><div class="PathNav"><a href="#Path2" title="Next event (2)">&#x2192;</a></div></td></tr></table></div></td></tr>
+<tr><td class="num"></td><td class="line"><div id="Path3" class="msg msgControl" style="margin-left:9ex"><table class="msgT"><tr><td valign="top"><div class="PathIndex PathIndexControl">3</div></td><td><div class="PathNav"><a href="#Path2" title="Previous event (2)">&#x2190;</a></div></td></td><td>Loop condition is false. Execution continues on line 261</td><td><div class="PathNav"><a href="#Path4" title="Next event (4)">&#x2192;</a></div></td></tr></table></div></td></tr>
+<tr><td class="num" id="LN259">259</td><td class="line">		<span class='keyword'>if</span> (value[i] == '\n')</td></tr>
+<tr><td class="num"></td><td class="line"><div id="Path2" class="msg msgControl" style="margin-left:17ex"><table class="msgT"><tr><td valign="top"><div class="PathIndex PathIndexControl">2</div></td><td><div class="PathNav"><a href="#Path1" title="Previous event (1)">&#x2190;</a></div></td></td><td>Taking true branch</td><td><div class="PathNav"><a href="#Path3" title="Next event (3)">&#x2192;</a></div></td></tr></table></div></td></tr>
+<tr><td class="num" id="LN260">260</td><td class="line">			regs-&gt;nr++;</td></tr>
+<tr><td class="num" id="LN261">261</td><td class="line">	<span class='macro'>ALLOC_ARRAY(regs-&gt;array, regs-&gt;nr)<span class='expansion'>(regs-&gt;array) = xmalloc(st_mult(sizeof(*(regs-&gt;array)),<br> (regs-&gt;nr)))</span></span>;</td></tr>
+<tr><td class="num" id="LN262">262</td><td class="line">	<span class='keyword'>for</span> (i = 0; i &lt; regs-&gt;nr; i++) {</td></tr>
+<tr><td class="num"></td><td class="line"><div id="Path4" class="msg msgControl" style="margin-left:9ex"><table class="msgT"><tr><td valign="top"><div class="PathIndex PathIndexControl">4</div></td><td><div class="PathNav"><a href="#Path3" title="Previous event (3)">&#x2190;</a></div></td></td><td>Loop condition is true.  Entering loop body</td><td><div class="PathNav"><a href="#Path5" title="Next event (5)">&#x2192;</a></div></td></tr></table></div></td></tr>
+<tr><td class="num"></td><td class="line"><div id="Path10" class="msg msgControl" style="margin-left:9ex"><table class="msgT"><tr><td valign="top"><div class="PathIndex PathIndexControl">10</div></td><td><div class="PathNav"><a href="#Path9" title="Previous event (9)">&#x2190;</a></div></td></td><td>Loop condition is true.  Entering loop body</td><td><div class="PathNav"><a href="#EndPath" title="Next event (11)">&#x2192;</a></div></td></tr></table></div></td></tr>
+<tr><td class="num" id="LN263">263</td><td class="line">		<span class='keyword'>struct</span> ff_reg *reg = regs-&gt;array + i;</td></tr>
+<tr><td class="num" id="LN264">264</td><td class="line">		<span class='keyword'>const</span> <span class='keyword'>char</span> *ep = strchr(value, '\n'), *expression;</td></tr>
+<tr><td class="num" id="LN265">265</td><td class="line">		<span class='keyword'>char</span> *buffer = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN266">266</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN267">267</td><td class="line">		reg-&gt;negate = (*<span class="mrange">value</span> == '!');</td></tr>
+<tr><td class="num"></td><td class="line"><div id="EndPath" class="msg msgEvent" style="margin-left:32ex"><table class="msgT"><tr><td valign="top"><div class="PathIndex PathIndexEvent">11</div></td><td><div class="PathNav"><a href="#Path10" title="Previous event (10)">&#x2190;</a></div></td></td><td>Dereference of null pointer (loaded from variable 'value')</td></tr></table></div></td></tr>
+<tr><td class="num" id="LN268">268</td><td class="line">		<span class='keyword'>if</span> (reg-&gt;negate &amp;&amp; i == regs-&gt;nr - 1)</td></tr>
+<tr><td class="num" id="LN269">269</td><td class="line">			die(<span class='string_literal'>"Last expression must not be negated: %s"</span>, value);</td></tr>
+<tr><td class="num" id="LN270">270</td><td class="line">		<span class='keyword'>if</span> (*value == '!')</td></tr>
+<tr><td class="num"></td><td class="line"><div id="Path5" class="msg msgControl" style="margin-left:17ex"><table class="msgT"><tr><td valign="top"><div class="PathIndex PathIndexControl">5</div></td><td><div class="PathNav"><a href="#Path4" title="Previous event (4)">&#x2190;</a></div></td></td><td>Taking false branch</td><td><div class="PathNav"><a href="#Path6" title="Next event (6)">&#x2192;</a></div></td></tr></table></div></td></tr>
+<tr><td class="num" id="LN271">271</td><td class="line">			value++;</td></tr>
+<tr><td class="num" id="LN272">272</td><td class="line">		<span class='keyword'>if</span> (<span class="mrange">ep</span>)</td></tr>
+<tr><td class="num"></td><td class="line"><div id="Path6" class="msg msgEvent" style="margin-left:21ex"><table class="msgT"><tr><td valign="top"><div class="PathIndex PathIndexEvent">6</div></td><td><div class="PathNav"><a href="#Path5" title="Previous event (5)">&#x2190;</a></div></td></td><td>Assuming 'ep' is null</td><td><div class="PathNav"><a href="#Path7" title="Next event (7)">&#x2192;</a></div></td></tr></table></div></td></tr>
+<tr><td class="num"></td><td class="line"><div id="Path7" class="msg msgControl" style="margin-left:17ex"><table class="msgT"><tr><td valign="top"><div class="PathIndex PathIndexControl">7</div></td><td><div class="PathNav"><a href="#Path6" title="Previous event (6)">&#x2190;</a></div></td></td><td>Taking false branch</td><td><div class="PathNav"><a href="#Path8" title="Next event (8)">&#x2192;</a></div></td></tr></table></div></td></tr>
+<tr><td class="num" id="LN273">273</td><td class="line">			expression = buffer = xstrndup(value, ep - value);</td></tr>
+<tr><td class="num" id="LN274">274</td><td class="line">		<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN275">275</td><td class="line">			expression = value;</td></tr>
+<tr><td class="num" id="LN276">276</td><td class="line">		<span class='keyword'>if</span> (regcomp(&amp;reg-&gt;re, expression, cflags))</td></tr>
+<tr><td class="num"></td><td class="line"><div id="Path8" class="msg msgControl" style="margin-left:17ex"><table class="msgT"><tr><td valign="top"><div class="PathIndex PathIndexControl">8</div></td><td><div class="PathNav"><a href="#Path7" title="Previous event (7)">&#x2190;</a></div></td></td><td>Taking false branch</td><td><div class="PathNav"><a href="#Path9" title="Next event (9)">&#x2192;</a></div></td></tr></table></div></td></tr>
+<tr><td class="num" id="LN277">277</td><td class="line">			die(<span class='string_literal'>"Invalid regexp to look for hunk header: %s"</span>, expression);</td></tr>
+<tr><td class="num" id="LN278">278</td><td class="line">		free(buffer);</td></tr>
+<tr><td class="num" id="LN279">279</td><td class="line">		<span class="mrange">value = ep + 1</span>;</td></tr>
+<tr><td class="num"></td><td class="line"><div id="Path9" class="msg msgEvent" style="margin-left:17ex"><table class="msgT"><tr><td valign="top"><div class="PathIndex PathIndexEvent">9</div></td><td><div class="PathNav"><a href="#Path8" title="Previous event (8)">&#x2190;</a></div></td></td><td>Null pointer value stored to 'value'</td><td><div class="PathNav"><a href="#Path10" title="Next event (10)">&#x2192;</a></div></td></tr></table></div></td></tr>
+<tr><td class="num" id="LN280">280</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN281">281</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN282">282</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN283">283</td><td class="line"><span class='keyword'>void</span> xdiff_clear_find_func(xdemitconf_t *xecfg)</td></tr>
+<tr><td class="num" id="LN284">284</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN285">285</td><td class="line">	<span class='keyword'>if</span> (xecfg-&gt;find_func) {</td></tr>
+<tr><td class="num" id="LN286">286</td><td class="line">		<span class='keyword'>int</span> i;</td></tr>
+<tr><td class="num" id="LN287">287</td><td class="line">		<span class='keyword'>struct</span> ff_regs *regs = xecfg-&gt;find_func_priv;</td></tr>
+<tr><td class="num" id="LN288">288</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN289">289</td><td class="line">		<span class='keyword'>for</span> (i = 0; i &lt; regs-&gt;nr; i++)</td></tr>
+<tr><td class="num" id="LN290">290</td><td class="line">			regfree(&amp;regs-&gt;array[i].re);</td></tr>
+<tr><td class="num" id="LN291">291</td><td class="line">		free(regs-&gt;array);</td></tr>
+<tr><td class="num" id="LN292">292</td><td class="line">		free(regs);</td></tr>
+<tr><td class="num" id="LN293">293</td><td class="line">		xecfg-&gt;find_func = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN294">294</td><td class="line">		xecfg-&gt;find_func_priv = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN295">295</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN296">296</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN297">297</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN298">298</td><td class="line"><span class='keyword'>int</span> git_xmerge_style = -1;</td></tr>
+<tr><td class="num" id="LN299">299</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN300">300</td><td class="line"><span class='keyword'>int</span> git_xmerge_config(<span class='keyword'>const</span> <span class='keyword'>char</span> *var, <span class='keyword'>const</span> <span class='keyword'>char</span> *value, <span class='keyword'>void</span> *cb)</td></tr>
+<tr><td class="num" id="LN301">301</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN302">302</td><td class="line">	<span class='keyword'>if</span> (!strcmp(var, <span class='string_literal'>"merge.conflictstyle"</span>)) {</td></tr>
+<tr><td class="num" id="LN303">303</td><td class="line">		<span class='keyword'>if</span> (!value)</td></tr>
+<tr><td class="num" id="LN304">304</td><td class="line">			die(<span class='string_literal'>"'%s' is not a boolean"</span>, var);</td></tr>
+<tr><td class="num" id="LN305">305</td><td class="line">		<span class='keyword'>if</span> (!strcmp(value, <span class='string_literal'>"diff3"</span>))</td></tr>
+<tr><td class="num" id="LN306">306</td><td class="line">			git_xmerge_style = <span class='macro'>XDL_MERGE_DIFF3<span class='expansion'>1</span></span>;</td></tr>
+<tr><td class="num" id="LN307">307</td><td class="line">		<span class='keyword'>else</span> <span class='keyword'>if</span> (!strcmp(value, <span class='string_literal'>"merge"</span>))</td></tr>
+<tr><td class="num" id="LN308">308</td><td class="line">			git_xmerge_style = 0;</td></tr>
+<tr><td class="num" id="LN309">309</td><td class="line">		<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN310">310</td><td class="line">			die(<span class='string_literal'>"unknown style '%s' given for '%s'"</span>,</td></tr>
+<tr><td class="num" id="LN311">311</td><td class="line">			    value, var);</td></tr>
+<tr><td class="num" id="LN312">312</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN313">313</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN314">314</td><td class="line">	<span class='keyword'>return</span> git_default_config(var, value, cb);</td></tr>
+<tr><td class="num" id="LN315">315</td><td class="line">}</td></tr>
+</table></body></html>

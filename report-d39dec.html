@@ -1,0 +1,1021 @@
+<!doctype html>
+<html>
+<head>
+<title>fsck.c</title>
+<style type="text/css">
+ body { color:#000000; background-color:#ffffff }
+ body { font-family:Helvetica, sans-serif; font-size:10pt }
+ h1 { font-size:14pt }
+ .code { border-collapse:collapse; width:100%; }
+ .code { font-family: "Monospace", monospace; font-size:10pt }
+ .code { line-height: 1.2em }
+ .comment { color: green; font-style: oblique }
+ .keyword { color: blue }
+ .string_literal { color: red }
+ .directive { color: darkmagenta }
+ .expansion { display: none; }
+ .macro:hover .expansion { display: block; border: 2px solid #FF0000; padding: 2px; background-color:#FFF0F0; font-weight: normal;   -webkit-border-radius:5px;  -webkit-box-shadow:1px 1px 7px #000; position: absolute; top: -1em; left:10em; z-index: 1 } 
+ .macro { color: darkmagenta; background-color:LemonChiffon; position: relative }
+ .num { width:2.5em; padding-right:2ex; background-color:#eeeeee }
+ .num { text-align:right; font-size:8pt }
+ .num { color:#444444 }
+ .line { padding-left: 1ex; border-left: 3px solid #ccc }
+ .line { white-space: pre }
+ .msg { -webkit-box-shadow:1px 1px 7px #000 }
+ .msg { -webkit-border-radius:5px }
+ .msg { font-family:Helvetica, sans-serif; font-size:8pt }
+ .msg { float:left }
+ .msg { padding:0.25em 1ex 0.25em 1ex }
+ .msg { margin-top:10px; margin-bottom:10px }
+ .msg { font-weight:bold }
+ .msg { max-width:60em; word-wrap: break-word; white-space: pre-wrap }
+ .msgT { padding:0x; spacing:0x }
+ .msgEvent { background-color:#fff8b4; color:#000000 }
+ .msgControl { background-color:#bbbbbb; color:#000000 }
+ .mrange { background-color:#dfddf3 }
+ .mrange { border-bottom:1px solid #6F9DBE }
+ .PathIndex { font-weight: bold; padding:0px 5px; margin-right:5px; }
+ .PathIndex { -webkit-border-radius:8px }
+ .PathIndexEvent { background-color:#bfba87 }
+ .PathIndexControl { background-color:#8c8c8c }
+ .PathNav a { text-decoration:none; font-size: larger }
+ .CodeInsertionHint { font-weight: bold; background-color: #10dd10 }
+ .CodeRemovalHint { background-color:#de1010 }
+ .CodeRemovalHint { border-bottom:1px solid #6F9DBE }
+ table.simpletable {
+   padding: 5px;
+   font-size:12pt;
+   margin:20px;
+   border-collapse: collapse; border-spacing: 0px;
+ }
+ td.rowname {
+   text-align:right; font-weight:bold; color:#444444;
+   padding-right:2ex; }
+</style>
+</head>
+<body>
+<!-- BUGDESC Value stored to 'p' is never read -->
+
+<!-- BUGTYPE Dead increment -->
+
+<!-- BUGCATEGORY Dead store -->
+
+<!-- BUGFILE /Users/lars/Code/git/fsck.c -->
+
+<!-- FILENAME fsck.c -->
+
+<!-- FUNCTIONNAME fsck_ident -->
+
+<!-- ISSUEHASHCONTENTOFLINEINCONTEXT c723118c6e0a47ab88ca4cd362244994 -->
+
+<!-- BUGLINE 705 -->
+
+<!-- BUGCOLUMN 2 -->
+
+<!-- BUGPATHLENGTH 1 -->
+
+<!-- BUGMETAEND -->
+<!-- REPORTHEADER -->
+<h3>Bug Summary</h3>
+<table class="simpletable">
+<tr><td class="rowname">File:</td><td>fsck.c</td></tr>
+<tr><td class="rowname">Location:</td><td><a href="#EndPath">line 705, column 2</a></td></tr>
+<tr><td class="rowname">Description:</td><td>Value stored to 'p' is never read</td></tr>
+</table>
+<!-- REPORTSUMMARYEXTRA -->
+<h3>Annotated Source Code</h3>
+<table class="code">
+<tr><td class="num" id="LN1">1</td><td class="line"><span class='directive'>#include "cache.h"</span></td></tr>
+<tr><td class="num" id="LN2">2</td><td class="line"><span class='directive'>#include "object.h"</span></td></tr>
+<tr><td class="num" id="LN3">3</td><td class="line"><span class='directive'>#include "blob.h"</span></td></tr>
+<tr><td class="num" id="LN4">4</td><td class="line"><span class='directive'>#include "tree.h"</span></td></tr>
+<tr><td class="num" id="LN5">5</td><td class="line"><span class='directive'>#include "tree-walk.h"</span></td></tr>
+<tr><td class="num" id="LN6">6</td><td class="line"><span class='directive'>#include "commit.h"</span></td></tr>
+<tr><td class="num" id="LN7">7</td><td class="line"><span class='directive'>#include "tag.h"</span></td></tr>
+<tr><td class="num" id="LN8">8</td><td class="line"><span class='directive'>#include "fsck.h"</span></td></tr>
+<tr><td class="num" id="LN9">9</td><td class="line"><span class='directive'>#include "refs.h"</span></td></tr>
+<tr><td class="num" id="LN10">10</td><td class="line"><span class='directive'>#include "utf8.h"</span></td></tr>
+<tr><td class="num" id="LN11">11</td><td class="line"><span class='directive'>#include "sha1-array.h"</span></td></tr>
+<tr><td class="num" id="LN12">12</td><td class="line"><span class='directive'>#include "decorate.h"</span></td></tr>
+<tr><td class="num" id="LN13">13</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN14">14</td><td class="line"><span class='directive'>#define <span class='macro'>FSCK_FATAL<span class='expansion'>-1</span></span> -1</span></td></tr>
+<tr><td class="num" id="LN15">15</td><td class="line"><span class='directive'>#define <span class='macro'>FSCK_INFO<span class='expansion'>-2</span></span> -2</span></td></tr>
+<tr><td class="num" id="LN16">16</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN17">17</td><td class="line"><span class='directive'>#define <span class='macro'>FOREACH_MSG_ID(FUNC)<span class='expansion'>FUNC(NUL_IN_HEADER, FATAL) FUNC(UNTERMINATED_HEADER, FATAL) FUNC<br>(BAD_DATE, ERROR) FUNC(BAD_DATE_OVERFLOW, ERROR) FUNC(BAD_EMAIL<br>, ERROR) FUNC(BAD_NAME, ERROR) FUNC(BAD_OBJECT_SHA1, ERROR) FUNC<br>(BAD_PARENT_SHA1, ERROR) FUNC(BAD_TAG_OBJECT, ERROR) FUNC(BAD_TIMEZONE<br>, ERROR) FUNC(BAD_TREE, ERROR) FUNC(BAD_TREE_SHA1, ERROR) FUNC<br>(BAD_TYPE, ERROR) FUNC(DUPLICATE_ENTRIES, ERROR) FUNC(MISSING_AUTHOR<br>, ERROR) FUNC(MISSING_COMMITTER, ERROR) FUNC(MISSING_EMAIL, ERROR<br>) FUNC(MISSING_GRAFT, ERROR) FUNC(MISSING_NAME_BEFORE_EMAIL, ERROR<br>) FUNC(MISSING_OBJECT, ERROR) FUNC(MISSING_PARENT, ERROR) FUNC<br>(MISSING_SPACE_BEFORE_DATE, ERROR) FUNC(MISSING_SPACE_BEFORE_EMAIL<br>, ERROR) FUNC(MISSING_TAG, ERROR) FUNC(MISSING_TAG_ENTRY, ERROR<br>) FUNC(MISSING_TAG_OBJECT, ERROR) FUNC(MISSING_TREE, ERROR) FUNC<br>(MISSING_TYPE, ERROR) FUNC(MISSING_TYPE_ENTRY, ERROR) FUNC(MULTIPLE_AUTHORS<br>, ERROR) FUNC(TAG_OBJECT_NOT_TAG, ERROR) FUNC(TREE_NOT_SORTED<br>, ERROR) FUNC(UNKNOWN_TYPE, ERROR) FUNC(ZERO_PADDED_DATE, ERROR<br>) FUNC(BAD_FILEMODE, WARN) FUNC(EMPTY_NAME, WARN) FUNC(FULL_PATHNAME<br>, WARN) FUNC(HAS_DOT, WARN) FUNC(HAS_DOTDOT, WARN) FUNC(HAS_DOTGIT<br>, WARN) FUNC(NULL_SHA1, WARN) FUNC(ZERO_PADDED_FILEMODE, WARN<br>) FUNC(NUL_IN_COMMIT, WARN) FUNC(BAD_TAG_NAME, INFO) FUNC(MISSING_TAGGER_ENTRY<br>, INFO)</span></span> \</span></td></tr>
+<tr><td class="num" id="LN18">18</td><td class="line">	<span class='directive'>/* fatal errors */ \</span></td></tr>
+<tr><td class="num" id="LN19">19</td><td class="line">	<span class='directive'>FUNC(NUL_IN_HEADER, FATAL) \</span></td></tr>
+<tr><td class="num" id="LN20">20</td><td class="line">	<span class='directive'>FUNC(UNTERMINATED_HEADER, FATAL) \</span></td></tr>
+<tr><td class="num" id="LN21">21</td><td class="line">	<span class='directive'>/* errors */ \</span></td></tr>
+<tr><td class="num" id="LN22">22</td><td class="line">	<span class='directive'>FUNC(BAD_DATE, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN23">23</td><td class="line">	<span class='directive'>FUNC(BAD_DATE_OVERFLOW, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN24">24</td><td class="line">	<span class='directive'>FUNC(BAD_EMAIL, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN25">25</td><td class="line">	<span class='directive'>FUNC(BAD_NAME, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN26">26</td><td class="line">	<span class='directive'>FUNC(BAD_OBJECT_SHA1, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN27">27</td><td class="line">	<span class='directive'>FUNC(BAD_PARENT_SHA1, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN28">28</td><td class="line">	<span class='directive'>FUNC(BAD_TAG_OBJECT, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN29">29</td><td class="line">	<span class='directive'>FUNC(BAD_TIMEZONE, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN30">30</td><td class="line">	<span class='directive'>FUNC(BAD_TREE, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN31">31</td><td class="line">	<span class='directive'>FUNC(BAD_TREE_SHA1, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN32">32</td><td class="line">	<span class='directive'>FUNC(BAD_TYPE, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN33">33</td><td class="line">	<span class='directive'>FUNC(DUPLICATE_ENTRIES, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN34">34</td><td class="line">	<span class='directive'>FUNC(MISSING_AUTHOR, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN35">35</td><td class="line">	<span class='directive'>FUNC(MISSING_COMMITTER, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN36">36</td><td class="line">	<span class='directive'>FUNC(MISSING_EMAIL, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN37">37</td><td class="line">	<span class='directive'>FUNC(MISSING_GRAFT, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN38">38</td><td class="line">	<span class='directive'>FUNC(MISSING_NAME_BEFORE_EMAIL, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN39">39</td><td class="line">	<span class='directive'>FUNC(MISSING_OBJECT, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN40">40</td><td class="line">	<span class='directive'>FUNC(MISSING_PARENT, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN41">41</td><td class="line">	<span class='directive'>FUNC(MISSING_SPACE_BEFORE_DATE, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN42">42</td><td class="line">	<span class='directive'>FUNC(MISSING_SPACE_BEFORE_EMAIL, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN43">43</td><td class="line">	<span class='directive'>FUNC(MISSING_TAG, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN44">44</td><td class="line">	<span class='directive'>FUNC(MISSING_TAG_ENTRY, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN45">45</td><td class="line">	<span class='directive'>FUNC(MISSING_TAG_OBJECT, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN46">46</td><td class="line">	<span class='directive'>FUNC(MISSING_TREE, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN47">47</td><td class="line">	<span class='directive'>FUNC(MISSING_TYPE, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN48">48</td><td class="line">	<span class='directive'>FUNC(MISSING_TYPE_ENTRY, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN49">49</td><td class="line">	<span class='directive'>FUNC(MULTIPLE_AUTHORS, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN50">50</td><td class="line">	<span class='directive'>FUNC(TAG_OBJECT_NOT_TAG, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN51">51</td><td class="line">	<span class='directive'>FUNC(TREE_NOT_SORTED, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN52">52</td><td class="line">	<span class='directive'>FUNC(UNKNOWN_TYPE, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN53">53</td><td class="line">	<span class='directive'>FUNC(ZERO_PADDED_DATE, ERROR) \</span></td></tr>
+<tr><td class="num" id="LN54">54</td><td class="line">	<span class='directive'>/* warnings */ \</span></td></tr>
+<tr><td class="num" id="LN55">55</td><td class="line">	<span class='directive'>FUNC(BAD_FILEMODE, WARN) \</span></td></tr>
+<tr><td class="num" id="LN56">56</td><td class="line">	<span class='directive'>FUNC(EMPTY_NAME, WARN) \</span></td></tr>
+<tr><td class="num" id="LN57">57</td><td class="line">	<span class='directive'>FUNC(FULL_PATHNAME, WARN) \</span></td></tr>
+<tr><td class="num" id="LN58">58</td><td class="line">	<span class='directive'>FUNC(HAS_DOT, WARN) \</span></td></tr>
+<tr><td class="num" id="LN59">59</td><td class="line">	<span class='directive'>FUNC(HAS_DOTDOT, WARN) \</span></td></tr>
+<tr><td class="num" id="LN60">60</td><td class="line">	<span class='directive'>FUNC(HAS_DOTGIT, WARN) \</span></td></tr>
+<tr><td class="num" id="LN61">61</td><td class="line">	<span class='directive'>FUNC(NULL_SHA1, WARN) \</span></td></tr>
+<tr><td class="num" id="LN62">62</td><td class="line">	<span class='directive'>FUNC(ZERO_PADDED_FILEMODE, WARN) \</span></td></tr>
+<tr><td class="num" id="LN63">63</td><td class="line">	<span class='directive'>FUNC(NUL_IN_COMMIT, WARN) \</span></td></tr>
+<tr><td class="num" id="LN64">64</td><td class="line">	<span class='directive'>/* infos (reported as warnings, but ignored by default) */ \</span></td></tr>
+<tr><td class="num" id="LN65">65</td><td class="line">	<span class='directive'>FUNC(BAD_TAG_NAME, INFO) \</span></td></tr>
+<tr><td class="num" id="LN66">66</td><td class="line">	<span class='directive'>FUNC(MISSING_TAGGER_ENTRY, INFO)</span></td></tr>
+<tr><td class="num" id="LN67">67</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN68">68</td><td class="line"><span class='directive'>#define MSG_ID(id, msg_type) FSCK_MSG_##id,</span></td></tr>
+<tr><td class="num" id="LN69">69</td><td class="line"><span class='keyword'>enum</span> fsck_msg_id {</td></tr>
+<tr><td class="num" id="LN70">70</td><td class="line">	<span class='macro'>FOREACH_MSG_ID(MSG_ID)<span class='expansion'>MSG_ID(NUL_IN_HEADER, FATAL) MSG_ID(UNTERMINATED_HEADER, FATAL<br>) MSG_ID(BAD_DATE, ERROR) MSG_ID(BAD_DATE_OVERFLOW, ERROR) MSG_ID<br>(BAD_EMAIL, ERROR) MSG_ID(BAD_NAME, ERROR) MSG_ID(BAD_OBJECT_SHA1<br>, ERROR) MSG_ID(BAD_PARENT_SHA1, ERROR) MSG_ID(BAD_TAG_OBJECT<br>, ERROR) MSG_ID(BAD_TIMEZONE, ERROR) MSG_ID(BAD_TREE, ERROR) MSG_ID<br>(BAD_TREE_SHA1, ERROR) MSG_ID(BAD_TYPE, ERROR) MSG_ID(DUPLICATE_ENTRIES<br>, ERROR) MSG_ID(MISSING_AUTHOR, ERROR) MSG_ID(MISSING_COMMITTER<br>, ERROR) MSG_ID(MISSING_EMAIL, ERROR) MSG_ID(MISSING_GRAFT, ERROR<br>) MSG_ID(MISSING_NAME_BEFORE_EMAIL, ERROR) MSG_ID(MISSING_OBJECT<br>, ERROR) MSG_ID(MISSING_PARENT, ERROR) MSG_ID(MISSING_SPACE_BEFORE_DATE<br>, ERROR) MSG_ID(MISSING_SPACE_BEFORE_EMAIL, ERROR) MSG_ID(MISSING_TAG<br>, ERROR) MSG_ID(MISSING_TAG_ENTRY, ERROR) MSG_ID(MISSING_TAG_OBJECT<br>, ERROR) MSG_ID(MISSING_TREE, ERROR) MSG_ID(MISSING_TYPE, ERROR<br>) MSG_ID(MISSING_TYPE_ENTRY, ERROR) MSG_ID(MULTIPLE_AUTHORS, ERROR<br>) MSG_ID(TAG_OBJECT_NOT_TAG, ERROR) MSG_ID(TREE_NOT_SORTED, ERROR<br>) MSG_ID(UNKNOWN_TYPE, ERROR) MSG_ID(ZERO_PADDED_DATE, ERROR)<br> MSG_ID(BAD_FILEMODE, WARN) MSG_ID(EMPTY_NAME, WARN) MSG_ID(FULL_PATHNAME<br>, WARN) MSG_ID(HAS_DOT, WARN) MSG_ID(HAS_DOTDOT, WARN) MSG_ID<br>(HAS_DOTGIT, WARN) MSG_ID(NULL_SHA1, WARN) MSG_ID(ZERO_PADDED_FILEMODE<br>, WARN) MSG_ID(NUL_IN_COMMIT, WARN) MSG_ID(BAD_TAG_NAME, INFO<br>) MSG_ID(MISSING_TAGGER_ENTRY, INFO)</span></span></td></tr>
+<tr><td class="num" id="LN71">71</td><td class="line">	FSCK_MSG_MAX</td></tr>
+<tr><td class="num" id="LN72">72</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN73">73</td><td class="line"><span class='directive'>#undef MSG_ID</span></td></tr>
+<tr><td class="num" id="LN74">74</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN75">75</td><td class="line"><span class='directive'>#define <span class='macro'>STR(x)<span class='expansion'>"x"</span></span> #x</span></td></tr>
+<tr><td class="num" id="LN76">76</td><td class="line"><span class='directive'>#define MSG_ID(id, msg_type) { <span class='macro'>STR(id)<span class='expansion'>"id"</span></span>, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, FSCK_##msg_type },</span></td></tr>
+<tr><td class="num" id="LN77">77</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>struct</span> {</td></tr>
+<tr><td class="num" id="LN78">78</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *id_string;</td></tr>
+<tr><td class="num" id="LN79">79</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *downcased;</td></tr>
+<tr><td class="num" id="LN80">80</td><td class="line">	<span class='keyword'>int</span> msg_type;</td></tr>
+<tr><td class="num" id="LN81">81</td><td class="line">} msg_id_info[FSCK_MSG_MAX + 1] = {</td></tr>
+<tr><td class="num" id="LN82">82</td><td class="line">	<span class='macro'>FOREACH_MSG_ID(MSG_ID)<span class='expansion'>MSG_ID(NUL_IN_HEADER, FATAL) MSG_ID(UNTERMINATED_HEADER, FATAL<br>) MSG_ID(BAD_DATE, ERROR) MSG_ID(BAD_DATE_OVERFLOW, ERROR) MSG_ID<br>(BAD_EMAIL, ERROR) MSG_ID(BAD_NAME, ERROR) MSG_ID(BAD_OBJECT_SHA1<br>, ERROR) MSG_ID(BAD_PARENT_SHA1, ERROR) MSG_ID(BAD_TAG_OBJECT<br>, ERROR) MSG_ID(BAD_TIMEZONE, ERROR) MSG_ID(BAD_TREE, ERROR) MSG_ID<br>(BAD_TREE_SHA1, ERROR) MSG_ID(BAD_TYPE, ERROR) MSG_ID(DUPLICATE_ENTRIES<br>, ERROR) MSG_ID(MISSING_AUTHOR, ERROR) MSG_ID(MISSING_COMMITTER<br>, ERROR) MSG_ID(MISSING_EMAIL, ERROR) MSG_ID(MISSING_GRAFT, ERROR<br>) MSG_ID(MISSING_NAME_BEFORE_EMAIL, ERROR) MSG_ID(MISSING_OBJECT<br>, ERROR) MSG_ID(MISSING_PARENT, ERROR) MSG_ID(MISSING_SPACE_BEFORE_DATE<br>, ERROR) MSG_ID(MISSING_SPACE_BEFORE_EMAIL, ERROR) MSG_ID(MISSING_TAG<br>, ERROR) MSG_ID(MISSING_TAG_ENTRY, ERROR) MSG_ID(MISSING_TAG_OBJECT<br>, ERROR) MSG_ID(MISSING_TREE, ERROR) MSG_ID(MISSING_TYPE, ERROR<br>) MSG_ID(MISSING_TYPE_ENTRY, ERROR) MSG_ID(MULTIPLE_AUTHORS, ERROR<br>) MSG_ID(TAG_OBJECT_NOT_TAG, ERROR) MSG_ID(TREE_NOT_SORTED, ERROR<br>) MSG_ID(UNKNOWN_TYPE, ERROR) MSG_ID(ZERO_PADDED_DATE, ERROR)<br> MSG_ID(BAD_FILEMODE, WARN) MSG_ID(EMPTY_NAME, WARN) MSG_ID(FULL_PATHNAME<br>, WARN) MSG_ID(HAS_DOT, WARN) MSG_ID(HAS_DOTDOT, WARN) MSG_ID<br>(HAS_DOTGIT, WARN) MSG_ID(NULL_SHA1, WARN) MSG_ID(ZERO_PADDED_FILEMODE<br>, WARN) MSG_ID(NUL_IN_COMMIT, WARN) MSG_ID(BAD_TAG_NAME, INFO<br>) MSG_ID(MISSING_TAGGER_ENTRY, INFO)</span></span></td></tr>
+<tr><td class="num" id="LN83">83</td><td class="line">	{ <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, -1 }</td></tr>
+<tr><td class="num" id="LN84">84</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN85">85</td><td class="line"><span class='directive'>#undef MSG_ID</span></td></tr>
+<tr><td class="num" id="LN86">86</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN87">87</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> parse_msg_id(<span class='keyword'>const</span> <span class='keyword'>char</span> *text)</td></tr>
+<tr><td class="num" id="LN88">88</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN89">89</td><td class="line">	<span class='keyword'>int</span> i;</td></tr>
+<tr><td class="num" id="LN90">90</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN91">91</td><td class="line">	<span class='keyword'>if</span> (!msg_id_info[0].downcased) {</td></tr>
+<tr><td class="num" id="LN92">92</td><td class="line">		<span class='comment'>/* convert id_string to lower case, without underscores. */</span></td></tr>
+<tr><td class="num" id="LN93">93</td><td class="line">		<span class='keyword'>for</span> (i = 0; i &lt; FSCK_MSG_MAX; i++) {</td></tr>
+<tr><td class="num" id="LN94">94</td><td class="line">			<span class='keyword'>const</span> <span class='keyword'>char</span> *p = msg_id_info[i].id_string;</td></tr>
+<tr><td class="num" id="LN95">95</td><td class="line">			<span class='keyword'>int</span> len = strlen(p);</td></tr>
+<tr><td class="num" id="LN96">96</td><td class="line">			<span class='keyword'>char</span> *q = xmalloc(len);</td></tr>
+<tr><td class="num" id="LN97">97</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN98">98</td><td class="line">			msg_id_info[i].downcased = q;</td></tr>
+<tr><td class="num" id="LN99">99</td><td class="line">			<span class='keyword'>while</span> (*p)</td></tr>
+<tr><td class="num" id="LN100">100</td><td class="line">				<span class='keyword'>if</span> (*p == '_')</td></tr>
+<tr><td class="num" id="LN101">101</td><td class="line">					p++;</td></tr>
+<tr><td class="num" id="LN102">102</td><td class="line">				<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN103">103</td><td class="line">					*(q)++ = <span class='macro'>tolower(*(p)++)<span class='expansion'>sane_case((unsigned char)(*(p)++), 0x20)</span></span>;</td></tr>
+<tr><td class="num" id="LN104">104</td><td class="line">			*q = '\0';</td></tr>
+<tr><td class="num" id="LN105">105</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN106">106</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN107">107</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN108">108</td><td class="line">	<span class='keyword'>for</span> (i = 0; i &lt; FSCK_MSG_MAX; i++)</td></tr>
+<tr><td class="num" id="LN109">109</td><td class="line">		<span class='keyword'>if</span> (!strcmp(text, msg_id_info[i].downcased))</td></tr>
+<tr><td class="num" id="LN110">110</td><td class="line">			<span class='keyword'>return</span> i;</td></tr>
+<tr><td class="num" id="LN111">111</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN112">112</td><td class="line">	<span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN113">113</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN114">114</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN115">115</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> fsck_msg_type(<span class='keyword'>enum</span> fsck_msg_id msg_id,</td></tr>
+<tr><td class="num" id="LN116">116</td><td class="line">	<span class='keyword'>struct</span> fsck_options *options)</td></tr>
+<tr><td class="num" id="LN117">117</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN118">118</td><td class="line">	<span class='keyword'>int</span> msg_type;</td></tr>
+<tr><td class="num" id="LN119">119</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN120">120</td><td class="line">	<span class='macro'>assert(msg_id &gt;= 0 &amp;&amp; msg_id &lt; FSCK_MSG_MAX)<span class='expansion'>(__builtin_expect(!(msg_id &gt;= 0 &amp;&amp; msg_id &lt; FSCK_MSG_MAX<br>), 0) ? __assert_rtn(__func__, "fsck.c", 120, "msg_id &gt;= 0 &amp;&amp; msg_id &lt; FSCK_MSG_MAX"<br>) : (void)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN121">121</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN122">122</td><td class="line">	<span class='keyword'>if</span> (options-&gt;msg_type)</td></tr>
+<tr><td class="num" id="LN123">123</td><td class="line">		msg_type = options-&gt;msg_type[msg_id];</td></tr>
+<tr><td class="num" id="LN124">124</td><td class="line">	<span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN125">125</td><td class="line">		msg_type = msg_id_info[msg_id].msg_type;</td></tr>
+<tr><td class="num" id="LN126">126</td><td class="line">		<span class='keyword'>if</span> (options-&gt;strict &amp;&amp; msg_type == <span class='macro'>FSCK_WARN<span class='expansion'>2</span></span>)</td></tr>
+<tr><td class="num" id="LN127">127</td><td class="line">			msg_type = <span class='macro'>FSCK_ERROR<span class='expansion'>1</span></span>;</td></tr>
+<tr><td class="num" id="LN128">128</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN129">129</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN130">130</td><td class="line">	<span class='keyword'>return</span> msg_type;</td></tr>
+<tr><td class="num" id="LN131">131</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN132">132</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN133">133</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> init_skiplist(<span class='keyword'>struct</span> fsck_options *options, <span class='keyword'>const</span> <span class='keyword'>char</span> *path)</td></tr>
+<tr><td class="num" id="LN134">134</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN135">135</td><td class="line">	<span class='keyword'>static</span> <span class='keyword'>struct</span> sha1_array skiplist = <span class='macro'>SHA1_ARRAY_INIT<span class='expansion'>{ ((void*)0), 0, 0, 0 }</span></span>;</td></tr>
+<tr><td class="num" id="LN136">136</td><td class="line">	<span class='keyword'>int</span> sorted, fd;</td></tr>
+<tr><td class="num" id="LN137">137</td><td class="line">	<span class='keyword'>char</span> buffer[41];</td></tr>
+<tr><td class="num" id="LN138">138</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> sha1[20];</td></tr>
+<tr><td class="num" id="LN139">139</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN140">140</td><td class="line">	<span class='keyword'>if</span> (options-&gt;skiplist)</td></tr>
+<tr><td class="num" id="LN141">141</td><td class="line">		sorted = options-&gt;skiplist-&gt;sorted;</td></tr>
+<tr><td class="num" id="LN142">142</td><td class="line">	<span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN143">143</td><td class="line">		sorted = 1;</td></tr>
+<tr><td class="num" id="LN144">144</td><td class="line">		options-&gt;skiplist = &amp;skiplist;</td></tr>
+<tr><td class="num" id="LN145">145</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN146">146</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN147">147</td><td class="line">	fd = open(path, <span class='macro'>O_RDONLY<span class='expansion'>0x0000</span></span>);</td></tr>
+<tr><td class="num" id="LN148">148</td><td class="line">	<span class='keyword'>if</span> (fd &lt; 0)</td></tr>
+<tr><td class="num" id="LN149">149</td><td class="line">		die(<span class='string_literal'>"Could not open skip list: %s"</span>, path);</td></tr>
+<tr><td class="num" id="LN150">150</td><td class="line">	<span class='keyword'>for</span> (;;) {</td></tr>
+<tr><td class="num" id="LN151">151</td><td class="line">		<span class='keyword'>int</span> result = read_in_full(fd, buffer, <span class='keyword'>sizeof</span>(buffer));</td></tr>
+<tr><td class="num" id="LN152">152</td><td class="line">		<span class='keyword'>if</span> (result &lt; 0)</td></tr>
+<tr><td class="num" id="LN153">153</td><td class="line">			die_errno(<span class='string_literal'>"Could not read '%s'"</span>, path);</td></tr>
+<tr><td class="num" id="LN154">154</td><td class="line">		<span class='keyword'>if</span> (!result)</td></tr>
+<tr><td class="num" id="LN155">155</td><td class="line">			<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN156">156</td><td class="line">		<span class='keyword'>if</span> (get_sha1_hex(buffer, sha1) || buffer[40] != '\n')</td></tr>
+<tr><td class="num" id="LN157">157</td><td class="line">			die(<span class='string_literal'>"Invalid SHA-1: %s"</span>, buffer);</td></tr>
+<tr><td class="num" id="LN158">158</td><td class="line">		sha1_array_append(&amp;skiplist, sha1);</td></tr>
+<tr><td class="num" id="LN159">159</td><td class="line">		<span class='keyword'>if</span> (sorted &amp;&amp; skiplist.nr &gt; 1 &amp;&amp;</td></tr>
+<tr><td class="num" id="LN160">160</td><td class="line">				hashcmp(skiplist.sha1[skiplist.nr - 2],</td></tr>
+<tr><td class="num" id="LN161">161</td><td class="line">					sha1) &gt; 0)</td></tr>
+<tr><td class="num" id="LN162">162</td><td class="line">			sorted = 0;</td></tr>
+<tr><td class="num" id="LN163">163</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN164">164</td><td class="line">	close(fd);</td></tr>
+<tr><td class="num" id="LN165">165</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN166">166</td><td class="line">	<span class='keyword'>if</span> (sorted)</td></tr>
+<tr><td class="num" id="LN167">167</td><td class="line">		skiplist.sorted = 1;</td></tr>
+<tr><td class="num" id="LN168">168</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN169">169</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN170">170</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> parse_msg_type(<span class='keyword'>const</span> <span class='keyword'>char</span> *str)</td></tr>
+<tr><td class="num" id="LN171">171</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN172">172</td><td class="line">	<span class='keyword'>if</span> (!strcmp(str, <span class='string_literal'>"error"</span>))</td></tr>
+<tr><td class="num" id="LN173">173</td><td class="line">		<span class='keyword'>return</span> <span class='macro'>FSCK_ERROR<span class='expansion'>1</span></span>;</td></tr>
+<tr><td class="num" id="LN174">174</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (!strcmp(str, <span class='string_literal'>"warn"</span>))</td></tr>
+<tr><td class="num" id="LN175">175</td><td class="line">		<span class='keyword'>return</span> <span class='macro'>FSCK_WARN<span class='expansion'>2</span></span>;</td></tr>
+<tr><td class="num" id="LN176">176</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (!strcmp(str, <span class='string_literal'>"ignore"</span>))</td></tr>
+<tr><td class="num" id="LN177">177</td><td class="line">		<span class='keyword'>return</span> <span class='macro'>FSCK_IGNORE<span class='expansion'>3</span></span>;</td></tr>
+<tr><td class="num" id="LN178">178</td><td class="line">	<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN179">179</td><td class="line">		die(<span class='string_literal'>"Unknown fsck message type: '%s'"</span>, str);</td></tr>
+<tr><td class="num" id="LN180">180</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN181">181</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN182">182</td><td class="line"><span class='keyword'>int</span> is_valid_msg_type(<span class='keyword'>const</span> <span class='keyword'>char</span> *msg_id, <span class='keyword'>const</span> <span class='keyword'>char</span> *msg_type)</td></tr>
+<tr><td class="num" id="LN183">183</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN184">184</td><td class="line">	<span class='keyword'>if</span> (parse_msg_id(msg_id) &lt; 0)</td></tr>
+<tr><td class="num" id="LN185">185</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN186">186</td><td class="line">	parse_msg_type(msg_type);</td></tr>
+<tr><td class="num" id="LN187">187</td><td class="line">	<span class='keyword'>return</span> 1;</td></tr>
+<tr><td class="num" id="LN188">188</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN189">189</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN190">190</td><td class="line"><span class='keyword'>void</span> fsck_set_msg_type(<span class='keyword'>struct</span> fsck_options *options,</td></tr>
+<tr><td class="num" id="LN191">191</td><td class="line">		<span class='keyword'>const</span> <span class='keyword'>char</span> *msg_id, <span class='keyword'>const</span> <span class='keyword'>char</span> *msg_type)</td></tr>
+<tr><td class="num" id="LN192">192</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN193">193</td><td class="line">	<span class='keyword'>int</span> id = parse_msg_id(msg_id), type;</td></tr>
+<tr><td class="num" id="LN194">194</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN195">195</td><td class="line">	<span class='keyword'>if</span> (id &lt; 0)</td></tr>
+<tr><td class="num" id="LN196">196</td><td class="line">		die(<span class='string_literal'>"Unhandled message id: %s"</span>, msg_id);</td></tr>
+<tr><td class="num" id="LN197">197</td><td class="line">	type = parse_msg_type(msg_type);</td></tr>
+<tr><td class="num" id="LN198">198</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN199">199</td><td class="line">	<span class='keyword'>if</span> (type != <span class='macro'>FSCK_ERROR<span class='expansion'>1</span></span> &amp;&amp; msg_id_info[id].msg_type == <span class='macro'>FSCK_FATAL<span class='expansion'>-1</span></span>)</td></tr>
+<tr><td class="num" id="LN200">200</td><td class="line">		die(<span class='string_literal'>"Cannot demote %s to %s"</span>, msg_id, msg_type);</td></tr>
+<tr><td class="num" id="LN201">201</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN202">202</td><td class="line">	<span class='keyword'>if</span> (!options-&gt;msg_type) {</td></tr>
+<tr><td class="num" id="LN203">203</td><td class="line">		<span class='keyword'>int</span> i;</td></tr>
+<tr><td class="num" id="LN204">204</td><td class="line">		<span class='keyword'>int</span> *msg_type;</td></tr>
+<tr><td class="num" id="LN205">205</td><td class="line">		<span class='macro'>ALLOC_ARRAY(msg_type, FSCK_MSG_MAX)<span class='expansion'>(msg_type) = xmalloc(st_mult(sizeof(*(msg_type)), (FSCK_MSG_MAX<br>)))</span></span>;</td></tr>
+<tr><td class="num" id="LN206">206</td><td class="line">		<span class='keyword'>for</span> (i = 0; i &lt; FSCK_MSG_MAX; i++)</td></tr>
+<tr><td class="num" id="LN207">207</td><td class="line">			msg_type[i] = fsck_msg_type(i, options);</td></tr>
+<tr><td class="num" id="LN208">208</td><td class="line">		options-&gt;msg_type = msg_type;</td></tr>
+<tr><td class="num" id="LN209">209</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN210">210</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN211">211</td><td class="line">	options-&gt;msg_type[id] = type;</td></tr>
+<tr><td class="num" id="LN212">212</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN213">213</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN214">214</td><td class="line"><span class='keyword'>void</span> fsck_set_msg_types(<span class='keyword'>struct</span> fsck_options *options, <span class='keyword'>const</span> <span class='keyword'>char</span> *values)</td></tr>
+<tr><td class="num" id="LN215">215</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN216">216</td><td class="line">	<span class='keyword'>char</span> *buf = xstrdup(values), *to_free = buf;</td></tr>
+<tr><td class="num" id="LN217">217</td><td class="line">	<span class='keyword'>int</span> done = 0;</td></tr>
+<tr><td class="num" id="LN218">218</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN219">219</td><td class="line">	<span class='keyword'>while</span> (!done) {</td></tr>
+<tr><td class="num" id="LN220">220</td><td class="line">		<span class='keyword'>int</span> len = strcspn(buf, <span class='string_literal'>" ,|"</span>), equal;</td></tr>
+<tr><td class="num" id="LN221">221</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN222">222</td><td class="line">		done = !buf[len];</td></tr>
+<tr><td class="num" id="LN223">223</td><td class="line">		<span class='keyword'>if</span> (!len) {</td></tr>
+<tr><td class="num" id="LN224">224</td><td class="line">			buf++;</td></tr>
+<tr><td class="num" id="LN225">225</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN226">226</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN227">227</td><td class="line">		buf[len] = '\0';</td></tr>
+<tr><td class="num" id="LN228">228</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN229">229</td><td class="line">		<span class='keyword'>for</span> (equal = 0;</td></tr>
+<tr><td class="num" id="LN230">230</td><td class="line">		     equal &lt; len &amp;&amp; buf[equal] != '=' &amp;&amp; buf[equal] != ':';</td></tr>
+<tr><td class="num" id="LN231">231</td><td class="line">		     equal++)</td></tr>
+<tr><td class="num" id="LN232">232</td><td class="line">			buf[equal] = <span class='macro'>tolower(buf[equal])<span class='expansion'>sane_case((unsigned char)(buf[equal]), 0x20)</span></span>;</td></tr>
+<tr><td class="num" id="LN233">233</td><td class="line">		buf[equal] = '\0';</td></tr>
+<tr><td class="num" id="LN234">234</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN235">235</td><td class="line">		<span class='keyword'>if</span> (!strcmp(buf, <span class='string_literal'>"skiplist"</span>)) {</td></tr>
+<tr><td class="num" id="LN236">236</td><td class="line">			<span class='keyword'>if</span> (equal == len)</td></tr>
+<tr><td class="num" id="LN237">237</td><td class="line">				die(<span class='string_literal'>"skiplist requires a path"</span>);</td></tr>
+<tr><td class="num" id="LN238">238</td><td class="line">			init_skiplist(options, buf + equal + 1);</td></tr>
+<tr><td class="num" id="LN239">239</td><td class="line">			buf += len + 1;</td></tr>
+<tr><td class="num" id="LN240">240</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN241">241</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN242">242</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN243">243</td><td class="line">		<span class='keyword'>if</span> (equal == len)</td></tr>
+<tr><td class="num" id="LN244">244</td><td class="line">			die(<span class='string_literal'>"Missing '=': '%s'"</span>, buf);</td></tr>
+<tr><td class="num" id="LN245">245</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN246">246</td><td class="line">		fsck_set_msg_type(options, buf, buf + equal + 1);</td></tr>
+<tr><td class="num" id="LN247">247</td><td class="line">		buf += len + 1;</td></tr>
+<tr><td class="num" id="LN248">248</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN249">249</td><td class="line">	free(to_free);</td></tr>
+<tr><td class="num" id="LN250">250</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN251">251</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN252">252</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> append_msg_id(<span class='keyword'>struct</span> strbuf *sb, <span class='keyword'>const</span> <span class='keyword'>char</span> *msg_id)</td></tr>
+<tr><td class="num" id="LN253">253</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN254">254</td><td class="line">	<span class='keyword'>for</span> (;;) {</td></tr>
+<tr><td class="num" id="LN255">255</td><td class="line">		<span class='keyword'>char</span> c = *(msg_id)++;</td></tr>
+<tr><td class="num" id="LN256">256</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN257">257</td><td class="line">		<span class='keyword'>if</span> (!c)</td></tr>
+<tr><td class="num" id="LN258">258</td><td class="line">			<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN259">259</td><td class="line">		<span class='keyword'>if</span> (c != '_')</td></tr>
+<tr><td class="num" id="LN260">260</td><td class="line">			strbuf_addch(sb, <span class='macro'>tolower(c)<span class='expansion'>sane_case((unsigned char)(c), 0x20)</span></span>);</td></tr>
+<tr><td class="num" id="LN261">261</td><td class="line">		<span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN262">262</td><td class="line">			<span class='macro'>assert(*msg_id)<span class='expansion'>(__builtin_expect(!(*msg_id), 0) ? __assert_rtn(__func__, "fsck.c"<br>, 262, "*msg_id") : (void)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN263">263</td><td class="line">			strbuf_addch(sb, *(msg_id)++);</td></tr>
+<tr><td class="num" id="LN264">264</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN265">265</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN266">266</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN267">267</td><td class="line">	strbuf_addstr(sb, <span class='string_literal'>": "</span>);</td></tr>
+<tr><td class="num" id="LN268">268</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN269">269</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN270">270</td><td class="line"><span class='keyword'>__attribute__</span>((format (printf, 4, 5)))</td></tr>
+<tr><td class="num" id="LN271">271</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> report(<span class='keyword'>struct</span> fsck_options *options, <span class='keyword'>struct</span> object *object,</td></tr>
+<tr><td class="num" id="LN272">272</td><td class="line">	<span class='keyword'>enum</span> fsck_msg_id id, <span class='keyword'>const</span> <span class='keyword'>char</span> *fmt, ...)</td></tr>
+<tr><td class="num" id="LN273">273</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN274">274</td><td class="line">	va_list ap;</td></tr>
+<tr><td class="num" id="LN275">275</td><td class="line">	<span class='keyword'>struct</span> strbuf sb = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN276">276</td><td class="line">	<span class='keyword'>int</span> msg_type = fsck_msg_type(id, options), result;</td></tr>
+<tr><td class="num" id="LN277">277</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN278">278</td><td class="line">	<span class='keyword'>if</span> (msg_type == <span class='macro'>FSCK_IGNORE<span class='expansion'>3</span></span>)</td></tr>
+<tr><td class="num" id="LN279">279</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN280">280</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN281">281</td><td class="line">	<span class='keyword'>if</span> (options-&gt;skiplist &amp;&amp; object &amp;&amp;</td></tr>
+<tr><td class="num" id="LN282">282</td><td class="line">			sha1_array_lookup(options-&gt;skiplist, object-&gt;oid.hash) &gt;= 0)</td></tr>
+<tr><td class="num" id="LN283">283</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN284">284</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN285">285</td><td class="line">	<span class='keyword'>if</span> (msg_type == <span class='macro'>FSCK_FATAL<span class='expansion'>-1</span></span>)</td></tr>
+<tr><td class="num" id="LN286">286</td><td class="line">		msg_type = <span class='macro'>FSCK_ERROR<span class='expansion'>1</span></span>;</td></tr>
+<tr><td class="num" id="LN287">287</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (msg_type == <span class='macro'>FSCK_INFO<span class='expansion'>-2</span></span>)</td></tr>
+<tr><td class="num" id="LN288">288</td><td class="line">		msg_type = <span class='macro'>FSCK_WARN<span class='expansion'>2</span></span>;</td></tr>
+<tr><td class="num" id="LN289">289</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN290">290</td><td class="line">	append_msg_id(&amp;sb, msg_id_info[id].id_string);</td></tr>
+<tr><td class="num" id="LN291">291</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN292">292</td><td class="line">	<span class='macro'>va_start(ap, fmt)<span class='expansion'>__builtin_va_start(ap, fmt)</span></span>;</td></tr>
+<tr><td class="num" id="LN293">293</td><td class="line">	strbuf_vaddf(&amp;sb, fmt, ap);</td></tr>
+<tr><td class="num" id="LN294">294</td><td class="line">	result = options-&gt;error_func(options, object, msg_type, sb.buf);</td></tr>
+<tr><td class="num" id="LN295">295</td><td class="line">	strbuf_release(&amp;sb);</td></tr>
+<tr><td class="num" id="LN296">296</td><td class="line">	<span class='macro'>va_end(ap)<span class='expansion'>__builtin_va_end(ap)</span></span>;</td></tr>
+<tr><td class="num" id="LN297">297</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN298">298</td><td class="line">	<span class='keyword'>return</span> result;</td></tr>
+<tr><td class="num" id="LN299">299</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN300">300</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN301">301</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>char</span> *get_object_name(<span class='keyword'>struct</span> fsck_options *options, <span class='keyword'>struct</span> object *obj)</td></tr>
+<tr><td class="num" id="LN302">302</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN303">303</td><td class="line">	<span class='keyword'>if</span> (!options-&gt;object_names)</td></tr>
+<tr><td class="num" id="LN304">304</td><td class="line">		<span class='keyword'>return</span> <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN305">305</td><td class="line">	<span class='keyword'>return</span> lookup_decoration(options-&gt;object_names, obj);</td></tr>
+<tr><td class="num" id="LN306">306</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN307">307</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN308">308</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> put_object_name(<span class='keyword'>struct</span> fsck_options *options, <span class='keyword'>struct</span> object *obj,</td></tr>
+<tr><td class="num" id="LN309">309</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *fmt, ...)</td></tr>
+<tr><td class="num" id="LN310">310</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN311">311</td><td class="line">	va_list ap;</td></tr>
+<tr><td class="num" id="LN312">312</td><td class="line">	<span class='keyword'>struct</span> strbuf buf = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN313">313</td><td class="line">	<span class='keyword'>char</span> *existing;</td></tr>
+<tr><td class="num" id="LN314">314</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN315">315</td><td class="line">	<span class='keyword'>if</span> (!options-&gt;object_names)</td></tr>
+<tr><td class="num" id="LN316">316</td><td class="line">		<span class='keyword'>return</span>;</td></tr>
+<tr><td class="num" id="LN317">317</td><td class="line">	existing = lookup_decoration(options-&gt;object_names, obj);</td></tr>
+<tr><td class="num" id="LN318">318</td><td class="line">	<span class='keyword'>if</span> (existing)</td></tr>
+<tr><td class="num" id="LN319">319</td><td class="line">		<span class='keyword'>return</span>;</td></tr>
+<tr><td class="num" id="LN320">320</td><td class="line">	<span class='macro'>va_start(ap, fmt)<span class='expansion'>__builtin_va_start(ap, fmt)</span></span>;</td></tr>
+<tr><td class="num" id="LN321">321</td><td class="line">	strbuf_vaddf(&amp;buf, fmt, ap);</td></tr>
+<tr><td class="num" id="LN322">322</td><td class="line">	add_decoration(options-&gt;object_names, obj, strbuf_detach(&amp;buf, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>));</td></tr>
+<tr><td class="num" id="LN323">323</td><td class="line">	<span class='macro'>va_end(ap)<span class='expansion'>__builtin_va_end(ap)</span></span>;</td></tr>
+<tr><td class="num" id="LN324">324</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN325">325</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN326">326</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> *describe_object(<span class='keyword'>struct</span> fsck_options *o, <span class='keyword'>struct</span> object *obj)</td></tr>
+<tr><td class="num" id="LN327">327</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN328">328</td><td class="line">	<span class='keyword'>static</span> <span class='keyword'>struct</span> strbuf buf = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN329">329</td><td class="line">	<span class='keyword'>char</span> *name;</td></tr>
+<tr><td class="num" id="LN330">330</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN331">331</td><td class="line">	<span class='macro'>strbuf_reset(&amp;buf)<span class='expansion'>strbuf_setlen(&amp;buf, 0)</span></span>;</td></tr>
+<tr><td class="num" id="LN332">332</td><td class="line">	strbuf_addstr(&amp;buf, oid_to_hex(&amp;obj-&gt;oid));</td></tr>
+<tr><td class="num" id="LN333">333</td><td class="line">	<span class='keyword'>if</span> (o-&gt;object_names &amp;&amp; (name = lookup_decoration(o-&gt;object_names, obj)))</td></tr>
+<tr><td class="num" id="LN334">334</td><td class="line">		strbuf_addf(&amp;buf, <span class='string_literal'>" (%s)"</span>, name);</td></tr>
+<tr><td class="num" id="LN335">335</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN336">336</td><td class="line">	<span class='keyword'>return</span> buf.buf;</td></tr>
+<tr><td class="num" id="LN337">337</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN338">338</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN339">339</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> fsck_walk_tree(<span class='keyword'>struct</span> tree *tree, <span class='keyword'>void</span> *data, <span class='keyword'>struct</span> fsck_options *options)</td></tr>
+<tr><td class="num" id="LN340">340</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN341">341</td><td class="line">	<span class='keyword'>struct</span> tree_desc desc;</td></tr>
+<tr><td class="num" id="LN342">342</td><td class="line">	<span class='keyword'>struct</span> name_entry entry;</td></tr>
+<tr><td class="num" id="LN343">343</td><td class="line">	<span class='keyword'>int</span> res = 0;</td></tr>
+<tr><td class="num" id="LN344">344</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *name;</td></tr>
+<tr><td class="num" id="LN345">345</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN346">346</td><td class="line">	<span class='keyword'>if</span> (parse_tree(tree))</td></tr>
+<tr><td class="num" id="LN347">347</td><td class="line">		<span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN348">348</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN349">349</td><td class="line">	name = get_object_name(options, &amp;tree-&gt;object);</td></tr>
+<tr><td class="num" id="LN350">350</td><td class="line">	<span class='keyword'>if</span> (init_tree_desc_gently(&amp;desc, tree-&gt;buffer, tree-&gt;size))</td></tr>
+<tr><td class="num" id="LN351">351</td><td class="line">		<span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN352">352</td><td class="line">	<span class='keyword'>while</span> (tree_entry_gently(&amp;desc, &amp;entry)) {</td></tr>
+<tr><td class="num" id="LN353">353</td><td class="line">		<span class='keyword'>struct</span> object *obj;</td></tr>
+<tr><td class="num" id="LN354">354</td><td class="line">		<span class='keyword'>int</span> result;</td></tr>
+<tr><td class="num" id="LN355">355</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN356">356</td><td class="line">		<span class='keyword'>if</span> (<span class='macro'>S_ISGITLINK(entry.mode)<span class='expansion'>(((entry.mode) &amp; 0170000) == 0160000)</span></span>)</td></tr>
+<tr><td class="num" id="LN357">357</td><td class="line">			<span class='keyword'>continue</span>;</td></tr>
+<tr><td class="num" id="LN358">358</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN359">359</td><td class="line">		<span class='keyword'>if</span> (<span class='macro'>S_ISDIR(entry.mode)<span class='expansion'>(((entry.mode) &amp; 0170000) == 0040000)</span></span>) {</td></tr>
+<tr><td class="num" id="LN360">360</td><td class="line">			obj = &amp;lookup_tree(entry.oid-&gt;hash)-&gt;object;</td></tr>
+<tr><td class="num" id="LN361">361</td><td class="line">			<span class='keyword'>if</span> (name)</td></tr>
+<tr><td class="num" id="LN362">362</td><td class="line">				put_object_name(options, obj, <span class='string_literal'>"%s%s/"</span>, name,</td></tr>
+<tr><td class="num" id="LN363">363</td><td class="line">					entry.path);</td></tr>
+<tr><td class="num" id="LN364">364</td><td class="line">			result = options-&gt;walk(obj, OBJ_TREE, data, options);</td></tr>
+<tr><td class="num" id="LN365">365</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN366">366</td><td class="line">		<span class='keyword'>else</span> <span class='keyword'>if</span> (<span class='macro'>S_ISREG(entry.mode)<span class='expansion'>(((entry.mode) &amp; 0170000) == 0100000)</span></span> || <span class='macro'>S_ISLNK(entry.mode)<span class='expansion'>(((entry.mode) &amp; 0170000) == 0120000)</span></span>) {</td></tr>
+<tr><td class="num" id="LN367">367</td><td class="line">			obj = &amp;lookup_blob(entry.oid-&gt;hash)-&gt;object;</td></tr>
+<tr><td class="num" id="LN368">368</td><td class="line">			<span class='keyword'>if</span> (name)</td></tr>
+<tr><td class="num" id="LN369">369</td><td class="line">				put_object_name(options, obj, <span class='string_literal'>"%s%s"</span>, name,</td></tr>
+<tr><td class="num" id="LN370">370</td><td class="line">					entry.path);</td></tr>
+<tr><td class="num" id="LN371">371</td><td class="line">			result = options-&gt;walk(obj, OBJ_BLOB, data, options);</td></tr>
+<tr><td class="num" id="LN372">372</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN373">373</td><td class="line">		<span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN374">374</td><td class="line">			result = <span class='macro'>error(<span class='string_literal'>"in tree %s: entry %s has bad mode %.6o"</span>,<span class='expansion'>(error("in tree %s: entry %s has bad mode %.6o", describe_object<br>(options, &amp;tree-&gt;object), entry.path, entry.mode), const_error<br>())</span></span></td></tr>
+<tr><td class="num" id="LN375">375</td><td class="line">					<span class='macro'>describe_object(options, &amp;tree-&gt;object), entry.path, entry.mode)<span class='expansion'>(error("in tree %s: entry %s has bad mode %.6o", describe_object<br>(options, &amp;tree-&gt;object), entry.path, entry.mode), const_error<br>())</span></span>;</td></tr>
+<tr><td class="num" id="LN376">376</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN377">377</td><td class="line">		<span class='keyword'>if</span> (result &lt; 0)</td></tr>
+<tr><td class="num" id="LN378">378</td><td class="line">			<span class='keyword'>return</span> result;</td></tr>
+<tr><td class="num" id="LN379">379</td><td class="line">		<span class='keyword'>if</span> (!res)</td></tr>
+<tr><td class="num" id="LN380">380</td><td class="line">			res = result;</td></tr>
+<tr><td class="num" id="LN381">381</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN382">382</td><td class="line">	<span class='keyword'>return</span> res;</td></tr>
+<tr><td class="num" id="LN383">383</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN384">384</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN385">385</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> fsck_walk_commit(<span class='keyword'>struct</span> commit *commit, <span class='keyword'>void</span> *data, <span class='keyword'>struct</span> fsck_options *options)</td></tr>
+<tr><td class="num" id="LN386">386</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN387">387</td><td class="line">	<span class='keyword'>int</span> counter = 0, generation = 0, name_prefix_len = 0;</td></tr>
+<tr><td class="num" id="LN388">388</td><td class="line">	<span class='keyword'>struct</span> commit_list *parents;</td></tr>
+<tr><td class="num" id="LN389">389</td><td class="line">	<span class='keyword'>int</span> res;</td></tr>
+<tr><td class="num" id="LN390">390</td><td class="line">	<span class='keyword'>int</span> result;</td></tr>
+<tr><td class="num" id="LN391">391</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *name;</td></tr>
+<tr><td class="num" id="LN392">392</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN393">393</td><td class="line">	<span class='keyword'>if</span> (parse_commit(commit))</td></tr>
+<tr><td class="num" id="LN394">394</td><td class="line">		<span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN395">395</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN396">396</td><td class="line">	name = get_object_name(options, &amp;commit-&gt;object);</td></tr>
+<tr><td class="num" id="LN397">397</td><td class="line">	<span class='keyword'>if</span> (name)</td></tr>
+<tr><td class="num" id="LN398">398</td><td class="line">		put_object_name(options, &amp;commit-&gt;tree-&gt;object, <span class='string_literal'>"%s:"</span>, name);</td></tr>
+<tr><td class="num" id="LN399">399</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN400">400</td><td class="line">	result = options-&gt;walk((<span class='keyword'>struct</span> object *)commit-&gt;tree, OBJ_TREE, data, options);</td></tr>
+<tr><td class="num" id="LN401">401</td><td class="line">	<span class='keyword'>if</span> (result &lt; 0)</td></tr>
+<tr><td class="num" id="LN402">402</td><td class="line">		<span class='keyword'>return</span> result;</td></tr>
+<tr><td class="num" id="LN403">403</td><td class="line">	res = result;</td></tr>
+<tr><td class="num" id="LN404">404</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN405">405</td><td class="line">	parents = commit-&gt;parents;</td></tr>
+<tr><td class="num" id="LN406">406</td><td class="line">	<span class='keyword'>if</span> (name &amp;&amp; parents) {</td></tr>
+<tr><td class="num" id="LN407">407</td><td class="line">		<span class='keyword'>int</span> len = strlen(name), power;</td></tr>
+<tr><td class="num" id="LN408">408</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN409">409</td><td class="line">		<span class='keyword'>if</span> (len &amp;&amp; name[len - 1] == '^') {</td></tr>
+<tr><td class="num" id="LN410">410</td><td class="line">			generation = 1;</td></tr>
+<tr><td class="num" id="LN411">411</td><td class="line">			name_prefix_len = len - 1;</td></tr>
+<tr><td class="num" id="LN412">412</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN413">413</td><td class="line">		<span class='keyword'>else</span> { <span class='comment'>/* parse ~&lt;generation&gt; suffix */</span></td></tr>
+<tr><td class="num" id="LN414">414</td><td class="line">			<span class='keyword'>for</span> (generation = 0, power = 1;</td></tr>
+<tr><td class="num" id="LN415">415</td><td class="line">			     len &amp;&amp; <span class='macro'>isdigit(name[len - 1])<span class='expansion'>((sane_ctype[(unsigned char)(name[len - 1])] &amp; (0x02)) !=<br> 0)</span></span>;</td></tr>
+<tr><td class="num" id="LN416">416</td><td class="line">			     power *= 10)</td></tr>
+<tr><td class="num" id="LN417">417</td><td class="line">				generation += power * (name[--len] - '0');</td></tr>
+<tr><td class="num" id="LN418">418</td><td class="line">			<span class='keyword'>if</span> (power &gt; 1 &amp;&amp; len &amp;&amp; name[len - 1] == '~')</td></tr>
+<tr><td class="num" id="LN419">419</td><td class="line">				name_prefix_len = len - 1;</td></tr>
+<tr><td class="num" id="LN420">420</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN421">421</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN422">422</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN423">423</td><td class="line">	<span class='keyword'>while</span> (parents) {</td></tr>
+<tr><td class="num" id="LN424">424</td><td class="line">		<span class='keyword'>if</span> (name) {</td></tr>
+<tr><td class="num" id="LN425">425</td><td class="line">			<span class='keyword'>struct</span> object *obj = &amp;parents-&gt;item-&gt;object;</td></tr>
+<tr><td class="num" id="LN426">426</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN427">427</td><td class="line">			<span class='keyword'>if</span> (++counter &gt; 1)</td></tr>
+<tr><td class="num" id="LN428">428</td><td class="line">				put_object_name(options, obj, <span class='string_literal'>"%s^%d"</span>,</td></tr>
+<tr><td class="num" id="LN429">429</td><td class="line">					name, counter);</td></tr>
+<tr><td class="num" id="LN430">430</td><td class="line">			<span class='keyword'>else</span> <span class='keyword'>if</span> (generation &gt; 0)</td></tr>
+<tr><td class="num" id="LN431">431</td><td class="line">				put_object_name(options, obj, <span class='string_literal'>"%.*s~%d"</span>,</td></tr>
+<tr><td class="num" id="LN432">432</td><td class="line">					name_prefix_len, name, generation + 1);</td></tr>
+<tr><td class="num" id="LN433">433</td><td class="line">			<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN434">434</td><td class="line">				put_object_name(options, obj, <span class='string_literal'>"%s^"</span>, name);</td></tr>
+<tr><td class="num" id="LN435">435</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN436">436</td><td class="line">		result = options-&gt;walk((<span class='keyword'>struct</span> object *)parents-&gt;item, OBJ_COMMIT, data, options);</td></tr>
+<tr><td class="num" id="LN437">437</td><td class="line">		<span class='keyword'>if</span> (result &lt; 0)</td></tr>
+<tr><td class="num" id="LN438">438</td><td class="line">			<span class='keyword'>return</span> result;</td></tr>
+<tr><td class="num" id="LN439">439</td><td class="line">		<span class='keyword'>if</span> (!res)</td></tr>
+<tr><td class="num" id="LN440">440</td><td class="line">			res = result;</td></tr>
+<tr><td class="num" id="LN441">441</td><td class="line">		parents = parents-&gt;next;</td></tr>
+<tr><td class="num" id="LN442">442</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN443">443</td><td class="line">	<span class='keyword'>return</span> res;</td></tr>
+<tr><td class="num" id="LN444">444</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN445">445</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN446">446</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> fsck_walk_tag(<span class='keyword'>struct</span> tag *tag, <span class='keyword'>void</span> *data, <span class='keyword'>struct</span> fsck_options *options)</td></tr>
+<tr><td class="num" id="LN447">447</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN448">448</td><td class="line">	<span class='keyword'>char</span> *name = get_object_name(options, &amp;tag-&gt;object);</td></tr>
+<tr><td class="num" id="LN449">449</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN450">450</td><td class="line">	<span class='keyword'>if</span> (parse_tag(tag))</td></tr>
+<tr><td class="num" id="LN451">451</td><td class="line">		<span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN452">452</td><td class="line">	<span class='keyword'>if</span> (name)</td></tr>
+<tr><td class="num" id="LN453">453</td><td class="line">		put_object_name(options, tag-&gt;tagged, <span class='string_literal'>"%s"</span>, name);</td></tr>
+<tr><td class="num" id="LN454">454</td><td class="line">	<span class='keyword'>return</span> options-&gt;walk(tag-&gt;tagged, OBJ_ANY, data, options);</td></tr>
+<tr><td class="num" id="LN455">455</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN456">456</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN457">457</td><td class="line"><span class='keyword'>int</span> fsck_walk(<span class='keyword'>struct</span> object *obj, <span class='keyword'>void</span> *data, <span class='keyword'>struct</span> fsck_options *options)</td></tr>
+<tr><td class="num" id="LN458">458</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN459">459</td><td class="line">	<span class='keyword'>if</span> (!obj)</td></tr>
+<tr><td class="num" id="LN460">460</td><td class="line">		<span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN461">461</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN462">462</td><td class="line">	<span class='keyword'>if</span> (obj-&gt;type == OBJ_NONE)</td></tr>
+<tr><td class="num" id="LN463">463</td><td class="line">		parse_object(obj-&gt;oid.hash);</td></tr>
+<tr><td class="num" id="LN464">464</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN465">465</td><td class="line">	<span class='keyword'>switch</span> (obj-&gt;type) {</td></tr>
+<tr><td class="num" id="LN466">466</td><td class="line">	<span class='keyword'>case</span> OBJ_BLOB:</td></tr>
+<tr><td class="num" id="LN467">467</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN468">468</td><td class="line">	<span class='keyword'>case</span> OBJ_TREE:</td></tr>
+<tr><td class="num" id="LN469">469</td><td class="line">		<span class='keyword'>return</span> fsck_walk_tree((<span class='keyword'>struct</span> tree *)obj, data, options);</td></tr>
+<tr><td class="num" id="LN470">470</td><td class="line">	<span class='keyword'>case</span> OBJ_COMMIT:</td></tr>
+<tr><td class="num" id="LN471">471</td><td class="line">		<span class='keyword'>return</span> fsck_walk_commit((<span class='keyword'>struct</span> commit *)obj, data, options);</td></tr>
+<tr><td class="num" id="LN472">472</td><td class="line">	<span class='keyword'>case</span> OBJ_TAG:</td></tr>
+<tr><td class="num" id="LN473">473</td><td class="line">		<span class='keyword'>return</span> fsck_walk_tag((<span class='keyword'>struct</span> tag *)obj, data, options);</td></tr>
+<tr><td class="num" id="LN474">474</td><td class="line">	<span class='keyword'>default</span>:</td></tr>
+<tr><td class="num" id="LN475">475</td><td class="line">		<span class='macro'>error(<span class='string_literal'>"Unknown object type for %s"</span>, describe_object(options, obj))<span class='expansion'>(error("Unknown object type for %s", describe_object(options,<br> obj)), const_error())</span></span>;</td></tr>
+<tr><td class="num" id="LN476">476</td><td class="line">		<span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN477">477</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN478">478</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN479">479</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN480">480</td><td class="line"><span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN481">481</td><td class="line"> <span class='comment'>* The entries in a tree are ordered in the _path_ order,</span></td></tr>
+<tr><td class="num" id="LN482">482</td><td class="line"> <span class='comment'>* which means that a directory entry is ordered by adding</span></td></tr>
+<tr><td class="num" id="LN483">483</td><td class="line"> <span class='comment'>* a slash to the end of it.</span></td></tr>
+<tr><td class="num" id="LN484">484</td><td class="line"> <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN485">485</td><td class="line"> <span class='comment'>* So a directory called "a" is ordered _after_ a file</span></td></tr>
+<tr><td class="num" id="LN486">486</td><td class="line"> <span class='comment'>* called "a.c", because "a/" sorts after "a.c".</span></td></tr>
+<tr><td class="num" id="LN487">487</td><td class="line"> <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN488">488</td><td class="line"><span class='directive'>#define <span class='macro'>TREE_UNORDERED<span class='expansion'>(-1)</span></span> (-1)</span></td></tr>
+<tr><td class="num" id="LN489">489</td><td class="line"><span class='directive'>#define <span class='macro'>TREE_HAS_DUPS<span class='expansion'>(-2)</span></span>  (-2)</span></td></tr>
+<tr><td class="num" id="LN490">490</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN491">491</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> verify_ordered(<span class='keyword'>unsigned</span> mode1, <span class='keyword'>const</span> <span class='keyword'>char</span> *name1, <span class='keyword'>unsigned</span> mode2, <span class='keyword'>const</span> <span class='keyword'>char</span> *name2)</td></tr>
+<tr><td class="num" id="LN492">492</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN493">493</td><td class="line">	<span class='keyword'>int</span> len1 = strlen(name1);</td></tr>
+<tr><td class="num" id="LN494">494</td><td class="line">	<span class='keyword'>int</span> len2 = strlen(name2);</td></tr>
+<tr><td class="num" id="LN495">495</td><td class="line">	<span class='keyword'>int</span> len = len1 &lt; len2 ? len1 : len2;</td></tr>
+<tr><td class="num" id="LN496">496</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> c1, c2;</td></tr>
+<tr><td class="num" id="LN497">497</td><td class="line">	<span class='keyword'>int</span> cmp;</td></tr>
+<tr><td class="num" id="LN498">498</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN499">499</td><td class="line">	cmp = memcmp(name1, name2, len);</td></tr>
+<tr><td class="num" id="LN500">500</td><td class="line">	<span class='keyword'>if</span> (cmp &lt; 0)</td></tr>
+<tr><td class="num" id="LN501">501</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN502">502</td><td class="line">	<span class='keyword'>if</span> (cmp &gt; 0)</td></tr>
+<tr><td class="num" id="LN503">503</td><td class="line">		<span class='keyword'>return</span> <span class='macro'>TREE_UNORDERED<span class='expansion'>(-1)</span></span>;</td></tr>
+<tr><td class="num" id="LN504">504</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN505">505</td><td class="line">	<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN506">506</td><td class="line">	 <span class='comment'>* Ok, the first &lt;len&gt; characters are the same.</span></td></tr>
+<tr><td class="num" id="LN507">507</td><td class="line">	 <span class='comment'>* Now we need to order the next one, but turn</span></td></tr>
+<tr><td class="num" id="LN508">508</td><td class="line">	 <span class='comment'>* a '\0' into a '/' for a directory entry.</span></td></tr>
+<tr><td class="num" id="LN509">509</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN510">510</td><td class="line">	c1 = name1[len];</td></tr>
+<tr><td class="num" id="LN511">511</td><td class="line">	c2 = name2[len];</td></tr>
+<tr><td class="num" id="LN512">512</td><td class="line">	<span class='keyword'>if</span> (!c1 &amp;&amp; !c2)</td></tr>
+<tr><td class="num" id="LN513">513</td><td class="line">		<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN514">514</td><td class="line">		 <span class='comment'>* git-write-tree used to write out a nonsense tree that has</span></td></tr>
+<tr><td class="num" id="LN515">515</td><td class="line">		 <span class='comment'>* entries with the same name, one blob and one tree.  Make</span></td></tr>
+<tr><td class="num" id="LN516">516</td><td class="line">		 <span class='comment'>* sure we do not have duplicate entries.</span></td></tr>
+<tr><td class="num" id="LN517">517</td><td class="line">		 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN518">518</td><td class="line">		<span class='keyword'>return</span> <span class='macro'>TREE_HAS_DUPS<span class='expansion'>(-2)</span></span>;</td></tr>
+<tr><td class="num" id="LN519">519</td><td class="line">	<span class='keyword'>if</span> (!c1 &amp;&amp; <span class='macro'>S_ISDIR(mode1)<span class='expansion'>(((mode1) &amp; 0170000) == 0040000)</span></span>)</td></tr>
+<tr><td class="num" id="LN520">520</td><td class="line">		c1 = '/';</td></tr>
+<tr><td class="num" id="LN521">521</td><td class="line">	<span class='keyword'>if</span> (!c2 &amp;&amp; <span class='macro'>S_ISDIR(mode2)<span class='expansion'>(((mode2) &amp; 0170000) == 0040000)</span></span>)</td></tr>
+<tr><td class="num" id="LN522">522</td><td class="line">		c2 = '/';</td></tr>
+<tr><td class="num" id="LN523">523</td><td class="line">	<span class='keyword'>return</span> c1 &lt; c2 ? 0 : <span class='macro'>TREE_UNORDERED<span class='expansion'>(-1)</span></span>;</td></tr>
+<tr><td class="num" id="LN524">524</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN525">525</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN526">526</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> fsck_tree(<span class='keyword'>struct</span> tree *item, <span class='keyword'>struct</span> fsck_options *options)</td></tr>
+<tr><td class="num" id="LN527">527</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN528">528</td><td class="line">	<span class='keyword'>int</span> retval = 0;</td></tr>
+<tr><td class="num" id="LN529">529</td><td class="line">	<span class='keyword'>int</span> has_null_sha1 = 0;</td></tr>
+<tr><td class="num" id="LN530">530</td><td class="line">	<span class='keyword'>int</span> has_full_path = 0;</td></tr>
+<tr><td class="num" id="LN531">531</td><td class="line">	<span class='keyword'>int</span> has_empty_name = 0;</td></tr>
+<tr><td class="num" id="LN532">532</td><td class="line">	<span class='keyword'>int</span> has_dot = 0;</td></tr>
+<tr><td class="num" id="LN533">533</td><td class="line">	<span class='keyword'>int</span> has_dotdot = 0;</td></tr>
+<tr><td class="num" id="LN534">534</td><td class="line">	<span class='keyword'>int</span> has_dotgit = 0;</td></tr>
+<tr><td class="num" id="LN535">535</td><td class="line">	<span class='keyword'>int</span> has_zero_pad = 0;</td></tr>
+<tr><td class="num" id="LN536">536</td><td class="line">	<span class='keyword'>int</span> has_bad_modes = 0;</td></tr>
+<tr><td class="num" id="LN537">537</td><td class="line">	<span class='keyword'>int</span> has_dup_entries = 0;</td></tr>
+<tr><td class="num" id="LN538">538</td><td class="line">	<span class='keyword'>int</span> not_properly_sorted = 0;</td></tr>
+<tr><td class="num" id="LN539">539</td><td class="line">	<span class='keyword'>struct</span> tree_desc desc;</td></tr>
+<tr><td class="num" id="LN540">540</td><td class="line">	<span class='keyword'>unsigned</span> o_mode;</td></tr>
+<tr><td class="num" id="LN541">541</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *o_name;</td></tr>
+<tr><td class="num" id="LN542">542</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN543">543</td><td class="line">	<span class='keyword'>if</span> (init_tree_desc_gently(&amp;desc, item-&gt;buffer, item-&gt;size)) {</td></tr>
+<tr><td class="num" id="LN544">544</td><td class="line">		retval += report(options, &amp;item-&gt;object, FSCK_MSG_BAD_TREE, <span class='string_literal'>"cannot be parsed as a tree"</span>);</td></tr>
+<tr><td class="num" id="LN545">545</td><td class="line">		<span class='keyword'>return</span> retval;</td></tr>
+<tr><td class="num" id="LN546">546</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN547">547</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN548">548</td><td class="line">	o_mode = 0;</td></tr>
+<tr><td class="num" id="LN549">549</td><td class="line">	o_name = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>;</td></tr>
+<tr><td class="num" id="LN550">550</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN551">551</td><td class="line">	<span class='keyword'>while</span> (desc.size) {</td></tr>
+<tr><td class="num" id="LN552">552</td><td class="line">		<span class='keyword'>unsigned</span> mode;</td></tr>
+<tr><td class="num" id="LN553">553</td><td class="line">		<span class='keyword'>const</span> <span class='keyword'>char</span> *name;</td></tr>
+<tr><td class="num" id="LN554">554</td><td class="line">		<span class='keyword'>const</span> <span class='keyword'>struct</span> object_id *oid;</td></tr>
+<tr><td class="num" id="LN555">555</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN556">556</td><td class="line">		oid = tree_entry_extract(&amp;desc, &amp;name, &amp;mode);</td></tr>
+<tr><td class="num" id="LN557">557</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN558">558</td><td class="line">		has_null_sha1 |= is_null_oid(oid);</td></tr>
+<tr><td class="num" id="LN559">559</td><td class="line">		has_full_path |= !!strchr(name, '/');</td></tr>
+<tr><td class="num" id="LN560">560</td><td class="line">		has_empty_name |= !*name;</td></tr>
+<tr><td class="num" id="LN561">561</td><td class="line">		has_dot |= !strcmp(name, <span class='string_literal'>"."</span>);</td></tr>
+<tr><td class="num" id="LN562">562</td><td class="line">		has_dotdot |= !strcmp(name, <span class='string_literal'>".."</span>);</td></tr>
+<tr><td class="num" id="LN563">563</td><td class="line">		has_dotgit |= (!strcmp(name, <span class='string_literal'>".git"</span>) ||</td></tr>
+<tr><td class="num" id="LN564">564</td><td class="line">			       is_hfs_dotgit(name) ||</td></tr>
+<tr><td class="num" id="LN565">565</td><td class="line">			       is_ntfs_dotgit(name));</td></tr>
+<tr><td class="num" id="LN566">566</td><td class="line">		has_zero_pad |= *(<span class='keyword'>char</span> *)desc.buffer == '0';</td></tr>
+<tr><td class="num" id="LN567">567</td><td class="line">		<span class='keyword'>if</span> (update_tree_entry_gently(&amp;desc)) {</td></tr>
+<tr><td class="num" id="LN568">568</td><td class="line">			retval += report(options, &amp;item-&gt;object, FSCK_MSG_BAD_TREE, <span class='string_literal'>"cannot be parsed as a tree"</span>);</td></tr>
+<tr><td class="num" id="LN569">569</td><td class="line">			<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN570">570</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN571">571</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN572">572</td><td class="line">		<span class='keyword'>switch</span> (mode) {</td></tr>
+<tr><td class="num" id="LN573">573</td><td class="line">		<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN574">574</td><td class="line">		 <span class='comment'>* Standard modes..</span></td></tr>
+<tr><td class="num" id="LN575">575</td><td class="line">		 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN576">576</td><td class="line">		<span class='keyword'>case</span> <span class='macro'>S_IFREG<span class='expansion'>0100000</span></span> | 0755:</td></tr>
+<tr><td class="num" id="LN577">577</td><td class="line">		<span class='keyword'>case</span> <span class='macro'>S_IFREG<span class='expansion'>0100000</span></span> | 0644:</td></tr>
+<tr><td class="num" id="LN578">578</td><td class="line">		<span class='keyword'>case</span> <span class='macro'>S_IFLNK<span class='expansion'>0120000</span></span>:</td></tr>
+<tr><td class="num" id="LN579">579</td><td class="line">		<span class='keyword'>case</span> <span class='macro'>S_IFDIR<span class='expansion'>0040000</span></span>:</td></tr>
+<tr><td class="num" id="LN580">580</td><td class="line">		<span class='keyword'>case</span> <span class='macro'>S_IFGITLINK<span class='expansion'>0160000</span></span>:</td></tr>
+<tr><td class="num" id="LN581">581</td><td class="line">			<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN582">582</td><td class="line">		<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN583">583</td><td class="line">		 <span class='comment'>* This is nonstandard, but we had a few of these</span></td></tr>
+<tr><td class="num" id="LN584">584</td><td class="line">		 <span class='comment'>* early on when we honored the full set of mode</span></td></tr>
+<tr><td class="num" id="LN585">585</td><td class="line">		 <span class='comment'>* bits..</span></td></tr>
+<tr><td class="num" id="LN586">586</td><td class="line">		 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN587">587</td><td class="line">		<span class='keyword'>case</span> <span class='macro'>S_IFREG<span class='expansion'>0100000</span></span> | 0664:</td></tr>
+<tr><td class="num" id="LN588">588</td><td class="line">			<span class='keyword'>if</span> (!options-&gt;strict)</td></tr>
+<tr><td class="num" id="LN589">589</td><td class="line">				<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN590">590</td><td class="line">		<span class='keyword'>default</span>:</td></tr>
+<tr><td class="num" id="LN591">591</td><td class="line">			has_bad_modes = 1;</td></tr>
+<tr><td class="num" id="LN592">592</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN593">593</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN594">594</td><td class="line">		<span class='keyword'>if</span> (o_name) {</td></tr>
+<tr><td class="num" id="LN595">595</td><td class="line">			<span class='keyword'>switch</span> (verify_ordered(o_mode, o_name, mode, name)) {</td></tr>
+<tr><td class="num" id="LN596">596</td><td class="line">			<span class='keyword'>case</span> <span class='macro'>TREE_UNORDERED<span class='expansion'>(-1)</span></span>:</td></tr>
+<tr><td class="num" id="LN597">597</td><td class="line">				not_properly_sorted = 1;</td></tr>
+<tr><td class="num" id="LN598">598</td><td class="line">				<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN599">599</td><td class="line">			<span class='keyword'>case</span> <span class='macro'>TREE_HAS_DUPS<span class='expansion'>(-2)</span></span>:</td></tr>
+<tr><td class="num" id="LN600">600</td><td class="line">				has_dup_entries = 1;</td></tr>
+<tr><td class="num" id="LN601">601</td><td class="line">				<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN602">602</td><td class="line">			<span class='keyword'>default</span>:</td></tr>
+<tr><td class="num" id="LN603">603</td><td class="line">				<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN604">604</td><td class="line">			}</td></tr>
+<tr><td class="num" id="LN605">605</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN606">606</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN607">607</td><td class="line">		o_mode = mode;</td></tr>
+<tr><td class="num" id="LN608">608</td><td class="line">		o_name = name;</td></tr>
+<tr><td class="num" id="LN609">609</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN610">610</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN611">611</td><td class="line">	<span class='keyword'>if</span> (has_null_sha1)</td></tr>
+<tr><td class="num" id="LN612">612</td><td class="line">		retval += report(options, &amp;item-&gt;object, FSCK_MSG_NULL_SHA1, <span class='string_literal'>"contains entries pointing to null sha1"</span>);</td></tr>
+<tr><td class="num" id="LN613">613</td><td class="line">	<span class='keyword'>if</span> (has_full_path)</td></tr>
+<tr><td class="num" id="LN614">614</td><td class="line">		retval += report(options, &amp;item-&gt;object, FSCK_MSG_FULL_PATHNAME, <span class='string_literal'>"contains full pathnames"</span>);</td></tr>
+<tr><td class="num" id="LN615">615</td><td class="line">	<span class='keyword'>if</span> (has_empty_name)</td></tr>
+<tr><td class="num" id="LN616">616</td><td class="line">		retval += report(options, &amp;item-&gt;object, FSCK_MSG_EMPTY_NAME, <span class='string_literal'>"contains empty pathname"</span>);</td></tr>
+<tr><td class="num" id="LN617">617</td><td class="line">	<span class='keyword'>if</span> (has_dot)</td></tr>
+<tr><td class="num" id="LN618">618</td><td class="line">		retval += report(options, &amp;item-&gt;object, FSCK_MSG_HAS_DOT, <span class='string_literal'>"contains '.'"</span>);</td></tr>
+<tr><td class="num" id="LN619">619</td><td class="line">	<span class='keyword'>if</span> (has_dotdot)</td></tr>
+<tr><td class="num" id="LN620">620</td><td class="line">		retval += report(options, &amp;item-&gt;object, FSCK_MSG_HAS_DOTDOT, <span class='string_literal'>"contains '..'"</span>);</td></tr>
+<tr><td class="num" id="LN621">621</td><td class="line">	<span class='keyword'>if</span> (has_dotgit)</td></tr>
+<tr><td class="num" id="LN622">622</td><td class="line">		retval += report(options, &amp;item-&gt;object, FSCK_MSG_HAS_DOTGIT, <span class='string_literal'>"contains '.git'"</span>);</td></tr>
+<tr><td class="num" id="LN623">623</td><td class="line">	<span class='keyword'>if</span> (has_zero_pad)</td></tr>
+<tr><td class="num" id="LN624">624</td><td class="line">		retval += report(options, &amp;item-&gt;object, FSCK_MSG_ZERO_PADDED_FILEMODE, <span class='string_literal'>"contains zero-padded file modes"</span>);</td></tr>
+<tr><td class="num" id="LN625">625</td><td class="line">	<span class='keyword'>if</span> (has_bad_modes)</td></tr>
+<tr><td class="num" id="LN626">626</td><td class="line">		retval += report(options, &amp;item-&gt;object, FSCK_MSG_BAD_FILEMODE, <span class='string_literal'>"contains bad file modes"</span>);</td></tr>
+<tr><td class="num" id="LN627">627</td><td class="line">	<span class='keyword'>if</span> (has_dup_entries)</td></tr>
+<tr><td class="num" id="LN628">628</td><td class="line">		retval += report(options, &amp;item-&gt;object, FSCK_MSG_DUPLICATE_ENTRIES, <span class='string_literal'>"contains duplicate file entries"</span>);</td></tr>
+<tr><td class="num" id="LN629">629</td><td class="line">	<span class='keyword'>if</span> (not_properly_sorted)</td></tr>
+<tr><td class="num" id="LN630">630</td><td class="line">		retval += report(options, &amp;item-&gt;object, FSCK_MSG_TREE_NOT_SORTED, <span class='string_literal'>"not properly sorted"</span>);</td></tr>
+<tr><td class="num" id="LN631">631</td><td class="line">	<span class='keyword'>return</span> retval;</td></tr>
+<tr><td class="num" id="LN632">632</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN633">633</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN634">634</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> verify_headers(<span class='keyword'>const</span> <span class='keyword'>void</span> *data, <span class='keyword'>unsigned</span> <span class='keyword'>long</span> size,</td></tr>
+<tr><td class="num" id="LN635">635</td><td class="line">			  <span class='keyword'>struct</span> object *obj, <span class='keyword'>struct</span> fsck_options *options)</td></tr>
+<tr><td class="num" id="LN636">636</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN637">637</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *buffer = (<span class='keyword'>const</span> <span class='keyword'>char</span> *)data;</td></tr>
+<tr><td class="num" id="LN638">638</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>long</span> i;</td></tr>
+<tr><td class="num" id="LN639">639</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN640">640</td><td class="line">	<span class='keyword'>for</span> (i = 0; i &lt; size; i++) {</td></tr>
+<tr><td class="num" id="LN641">641</td><td class="line">		<span class='keyword'>switch</span> (buffer[i]) {</td></tr>
+<tr><td class="num" id="LN642">642</td><td class="line">		<span class='keyword'>case</span> '\0':</td></tr>
+<tr><td class="num" id="LN643">643</td><td class="line">			<span class='keyword'>return</span> report(options, obj,</td></tr>
+<tr><td class="num" id="LN644">644</td><td class="line">				FSCK_MSG_NUL_IN_HEADER,</td></tr>
+<tr><td class="num" id="LN645">645</td><td class="line">				<span class='string_literal'>"unterminated header: NUL at offset %ld"</span>, i);</td></tr>
+<tr><td class="num" id="LN646">646</td><td class="line">		<span class='keyword'>case</span> '\n':</td></tr>
+<tr><td class="num" id="LN647">647</td><td class="line">			<span class='keyword'>if</span> (i + 1 &lt; size &amp;&amp; buffer[i + 1] == '\n')</td></tr>
+<tr><td class="num" id="LN648">648</td><td class="line">				<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN649">649</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN650">650</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN651">651</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN652">652</td><td class="line">	<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN653">653</td><td class="line">	 <span class='comment'>* We did not find double-LF that separates the header</span></td></tr>
+<tr><td class="num" id="LN654">654</td><td class="line">	 <span class='comment'>* and the body.  Not having a body is not a crime but</span></td></tr>
+<tr><td class="num" id="LN655">655</td><td class="line">	 <span class='comment'>* we do want to see the terminating LF for the last header</span></td></tr>
+<tr><td class="num" id="LN656">656</td><td class="line">	 <span class='comment'>* line.</span></td></tr>
+<tr><td class="num" id="LN657">657</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN658">658</td><td class="line">	<span class='keyword'>if</span> (size &amp;&amp; buffer[size - 1] == '\n')</td></tr>
+<tr><td class="num" id="LN659">659</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN660">660</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN661">661</td><td class="line">	<span class='keyword'>return</span> report(options, obj,</td></tr>
+<tr><td class="num" id="LN662">662</td><td class="line">		FSCK_MSG_UNTERMINATED_HEADER, <span class='string_literal'>"unterminated header"</span>);</td></tr>
+<tr><td class="num" id="LN663">663</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN664">664</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN665">665</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> fsck_ident(<span class='keyword'>const</span> <span class='keyword'>char</span> **ident, <span class='keyword'>struct</span> object *obj, <span class='keyword'>struct</span> fsck_options *options)</td></tr>
+<tr><td class="num" id="LN666">666</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN667">667</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *p = *ident;</td></tr>
+<tr><td class="num" id="LN668">668</td><td class="line">	<span class='keyword'>char</span> *end;</td></tr>
+<tr><td class="num" id="LN669">669</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN670">670</td><td class="line">	*ident = <span class='macro'>strchrnul<span class='expansion'>gitstrchrnul</span></span>(*ident, '\n');</td></tr>
+<tr><td class="num" id="LN671">671</td><td class="line">	<span class='keyword'>if</span> (**ident == '\n')</td></tr>
+<tr><td class="num" id="LN672">672</td><td class="line">		(*ident)++;</td></tr>
+<tr><td class="num" id="LN673">673</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN674">674</td><td class="line">	<span class='keyword'>if</span> (*p == '&lt;')</td></tr>
+<tr><td class="num" id="LN675">675</td><td class="line">		<span class='keyword'>return</span> report(options, obj, FSCK_MSG_MISSING_NAME_BEFORE_EMAIL, <span class='string_literal'>"invalid author/committer line - missing space before email"</span>);</td></tr>
+<tr><td class="num" id="LN676">676</td><td class="line">	p += strcspn(p, <span class='string_literal'>"&lt;&gt;\n"</span>);</td></tr>
+<tr><td class="num" id="LN677">677</td><td class="line">	<span class='keyword'>if</span> (*p == '&gt;')</td></tr>
+<tr><td class="num" id="LN678">678</td><td class="line">		<span class='keyword'>return</span> report(options, obj, FSCK_MSG_BAD_NAME, <span class='string_literal'>"invalid author/committer line - bad name"</span>);</td></tr>
+<tr><td class="num" id="LN679">679</td><td class="line">	<span class='keyword'>if</span> (*p != '&lt;')</td></tr>
+<tr><td class="num" id="LN680">680</td><td class="line">		<span class='keyword'>return</span> report(options, obj, FSCK_MSG_MISSING_EMAIL, <span class='string_literal'>"invalid author/committer line - missing email"</span>);</td></tr>
+<tr><td class="num" id="LN681">681</td><td class="line">	<span class='keyword'>if</span> (p[-1] != ' ')</td></tr>
+<tr><td class="num" id="LN682">682</td><td class="line">		<span class='keyword'>return</span> report(options, obj, FSCK_MSG_MISSING_SPACE_BEFORE_EMAIL, <span class='string_literal'>"invalid author/committer line - missing space before email"</span>);</td></tr>
+<tr><td class="num" id="LN683">683</td><td class="line">	p++;</td></tr>
+<tr><td class="num" id="LN684">684</td><td class="line">	p += strcspn(p, <span class='string_literal'>"&lt;&gt;\n"</span>);</td></tr>
+<tr><td class="num" id="LN685">685</td><td class="line">	<span class='keyword'>if</span> (*p != '&gt;')</td></tr>
+<tr><td class="num" id="LN686">686</td><td class="line">		<span class='keyword'>return</span> report(options, obj, FSCK_MSG_BAD_EMAIL, <span class='string_literal'>"invalid author/committer line - bad email"</span>);</td></tr>
+<tr><td class="num" id="LN687">687</td><td class="line">	p++;</td></tr>
+<tr><td class="num" id="LN688">688</td><td class="line">	<span class='keyword'>if</span> (*p != ' ')</td></tr>
+<tr><td class="num" id="LN689">689</td><td class="line">		<span class='keyword'>return</span> report(options, obj, FSCK_MSG_MISSING_SPACE_BEFORE_DATE, <span class='string_literal'>"invalid author/committer line - missing space before date"</span>);</td></tr>
+<tr><td class="num" id="LN690">690</td><td class="line">	p++;</td></tr>
+<tr><td class="num" id="LN691">691</td><td class="line">	<span class='keyword'>if</span> (*p == '0' &amp;&amp; p[1] != ' ')</td></tr>
+<tr><td class="num" id="LN692">692</td><td class="line">		<span class='keyword'>return</span> report(options, obj, FSCK_MSG_ZERO_PADDED_DATE, <span class='string_literal'>"invalid author/committer line - zero-padded date"</span>);</td></tr>
+<tr><td class="num" id="LN693">693</td><td class="line">	<span class='keyword'>if</span> (date_overflows(strtoul(p, &amp;end, 10)))</td></tr>
+<tr><td class="num" id="LN694">694</td><td class="line">		<span class='keyword'>return</span> report(options, obj, FSCK_MSG_BAD_DATE_OVERFLOW, <span class='string_literal'>"invalid author/committer line - date causes integer overflow"</span>);</td></tr>
+<tr><td class="num" id="LN695">695</td><td class="line">	<span class='keyword'>if</span> ((end == p || *end != ' '))</td></tr>
+<tr><td class="num" id="LN696">696</td><td class="line">		<span class='keyword'>return</span> report(options, obj, FSCK_MSG_BAD_DATE, <span class='string_literal'>"invalid author/committer line - bad date"</span>);</td></tr>
+<tr><td class="num" id="LN697">697</td><td class="line">	p = end + 1;</td></tr>
+<tr><td class="num" id="LN698">698</td><td class="line">	<span class='keyword'>if</span> ((*p != '+' &amp;&amp; *p != '-') ||</td></tr>
+<tr><td class="num" id="LN699">699</td><td class="line">	    !<span class='macro'>isdigit(p[1])<span class='expansion'>((sane_ctype[(unsigned char)(p[1])] &amp; (0x02)) != 0)</span></span> ||</td></tr>
+<tr><td class="num" id="LN700">700</td><td class="line">	    !<span class='macro'>isdigit(p[2])<span class='expansion'>((sane_ctype[(unsigned char)(p[2])] &amp; (0x02)) != 0)</span></span> ||</td></tr>
+<tr><td class="num" id="LN701">701</td><td class="line">	    !<span class='macro'>isdigit(p[3])<span class='expansion'>((sane_ctype[(unsigned char)(p[3])] &amp; (0x02)) != 0)</span></span> ||</td></tr>
+<tr><td class="num" id="LN702">702</td><td class="line">	    !<span class='macro'>isdigit(p[4])<span class='expansion'>((sane_ctype[(unsigned char)(p[4])] &amp; (0x02)) != 0)</span></span> ||</td></tr>
+<tr><td class="num" id="LN703">703</td><td class="line">	    (p[5] != '\n'))</td></tr>
+<tr><td class="num" id="LN704">704</td><td class="line">		<span class='keyword'>return</span> report(options, obj, FSCK_MSG_BAD_TIMEZONE, <span class='string_literal'>"invalid author/committer line - bad time zone"</span>);</td></tr>
+<tr><td class="num" id="LN705">705</td><td class="line">	p += <span class="mrange">6</span>;</td></tr>
+<tr><td class="num"></td><td class="line"><div id="EndPath" class="msg msgEvent" style="margin-left:9ex">Value stored to 'p' is never read</div></td></tr>
+<tr><td class="num" id="LN706">706</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN707">707</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN708">708</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN709">709</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> fsck_commit_buffer(<span class='keyword'>struct</span> commit *commit, <span class='keyword'>const</span> <span class='keyword'>char</span> *buffer,</td></tr>
+<tr><td class="num" id="LN710">710</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>long</span> size, <span class='keyword'>struct</span> fsck_options *options)</td></tr>
+<tr><td class="num" id="LN711">711</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN712">712</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> tree_sha1[20], sha1[20];</td></tr>
+<tr><td class="num" id="LN713">713</td><td class="line">	<span class='keyword'>struct</span> commit_graft *graft;</td></tr>
+<tr><td class="num" id="LN714">714</td><td class="line">	<span class='keyword'>unsigned</span> parent_count, parent_line_count = 0, author_count;</td></tr>
+<tr><td class="num" id="LN715">715</td><td class="line">	<span class='keyword'>int</span> err;</td></tr>
+<tr><td class="num" id="LN716">716</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *buffer_begin = buffer;</td></tr>
+<tr><td class="num" id="LN717">717</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN718">718</td><td class="line">	<span class='keyword'>if</span> (verify_headers(buffer, size, &amp;commit-&gt;object, options))</td></tr>
+<tr><td class="num" id="LN719">719</td><td class="line">		<span class='keyword'>return</span> -1;</td></tr>
+<tr><td class="num" id="LN720">720</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN721">721</td><td class="line">	<span class='keyword'>if</span> (!skip_prefix(buffer, <span class='string_literal'>"tree "</span>, &amp;buffer))</td></tr>
+<tr><td class="num" id="LN722">722</td><td class="line">		<span class='keyword'>return</span> report(options, &amp;commit-&gt;object, FSCK_MSG_MISSING_TREE, <span class='string_literal'>"invalid format - expected 'tree' line"</span>);</td></tr>
+<tr><td class="num" id="LN723">723</td><td class="line">	<span class='keyword'>if</span> (get_sha1_hex(buffer, tree_sha1) || buffer[40] != '\n') {</td></tr>
+<tr><td class="num" id="LN724">724</td><td class="line">		err = report(options, &amp;commit-&gt;object, FSCK_MSG_BAD_TREE_SHA1, <span class='string_literal'>"invalid 'tree' line format - bad sha1"</span>);</td></tr>
+<tr><td class="num" id="LN725">725</td><td class="line">		<span class='keyword'>if</span> (err)</td></tr>
+<tr><td class="num" id="LN726">726</td><td class="line">			<span class='keyword'>return</span> err;</td></tr>
+<tr><td class="num" id="LN727">727</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN728">728</td><td class="line">	buffer += 41;</td></tr>
+<tr><td class="num" id="LN729">729</td><td class="line">	<span class='keyword'>while</span> (skip_prefix(buffer, <span class='string_literal'>"parent "</span>, &amp;buffer)) {</td></tr>
+<tr><td class="num" id="LN730">730</td><td class="line">		<span class='keyword'>if</span> (get_sha1_hex(buffer, sha1) || buffer[40] != '\n') {</td></tr>
+<tr><td class="num" id="LN731">731</td><td class="line">			err = report(options, &amp;commit-&gt;object, FSCK_MSG_BAD_PARENT_SHA1, <span class='string_literal'>"invalid 'parent' line format - bad sha1"</span>);</td></tr>
+<tr><td class="num" id="LN732">732</td><td class="line">			<span class='keyword'>if</span> (err)</td></tr>
+<tr><td class="num" id="LN733">733</td><td class="line">				<span class='keyword'>return</span> err;</td></tr>
+<tr><td class="num" id="LN734">734</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN735">735</td><td class="line">		buffer += 41;</td></tr>
+<tr><td class="num" id="LN736">736</td><td class="line">		parent_line_count++;</td></tr>
+<tr><td class="num" id="LN737">737</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN738">738</td><td class="line">	graft = lookup_commit_graft(commit-&gt;object.oid.hash);</td></tr>
+<tr><td class="num" id="LN739">739</td><td class="line">	parent_count = commit_list_count(commit-&gt;parents);</td></tr>
+<tr><td class="num" id="LN740">740</td><td class="line">	<span class='keyword'>if</span> (graft) {</td></tr>
+<tr><td class="num" id="LN741">741</td><td class="line">		<span class='keyword'>if</span> (graft-&gt;nr_parent == -1 &amp;&amp; !parent_count)</td></tr>
+<tr><td class="num" id="LN742">742</td><td class="line">			; <span class='comment'>/* shallow commit */</span></td></tr>
+<tr><td class="num" id="LN743">743</td><td class="line">		<span class='keyword'>else</span> <span class='keyword'>if</span> (graft-&gt;nr_parent != parent_count) {</td></tr>
+<tr><td class="num" id="LN744">744</td><td class="line">			err = report(options, &amp;commit-&gt;object, FSCK_MSG_MISSING_GRAFT, <span class='string_literal'>"graft objects missing"</span>);</td></tr>
+<tr><td class="num" id="LN745">745</td><td class="line">			<span class='keyword'>if</span> (err)</td></tr>
+<tr><td class="num" id="LN746">746</td><td class="line">				<span class='keyword'>return</span> err;</td></tr>
+<tr><td class="num" id="LN747">747</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN748">748</td><td class="line">	} <span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN749">749</td><td class="line">		<span class='keyword'>if</span> (parent_count != parent_line_count) {</td></tr>
+<tr><td class="num" id="LN750">750</td><td class="line">			err = report(options, &amp;commit-&gt;object, FSCK_MSG_MISSING_PARENT, <span class='string_literal'>"parent objects missing"</span>);</td></tr>
+<tr><td class="num" id="LN751">751</td><td class="line">			<span class='keyword'>if</span> (err)</td></tr>
+<tr><td class="num" id="LN752">752</td><td class="line">				<span class='keyword'>return</span> err;</td></tr>
+<tr><td class="num" id="LN753">753</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN754">754</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN755">755</td><td class="line">	author_count = 0;</td></tr>
+<tr><td class="num" id="LN756">756</td><td class="line">	<span class='keyword'>while</span> (skip_prefix(buffer, <span class='string_literal'>"author "</span>, &amp;buffer)) {</td></tr>
+<tr><td class="num" id="LN757">757</td><td class="line">		author_count++;</td></tr>
+<tr><td class="num" id="LN758">758</td><td class="line">		err = fsck_ident(&amp;buffer, &amp;commit-&gt;object, options);</td></tr>
+<tr><td class="num" id="LN759">759</td><td class="line">		<span class='keyword'>if</span> (err)</td></tr>
+<tr><td class="num" id="LN760">760</td><td class="line">			<span class='keyword'>return</span> err;</td></tr>
+<tr><td class="num" id="LN761">761</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN762">762</td><td class="line">	<span class='keyword'>if</span> (author_count &lt; 1)</td></tr>
+<tr><td class="num" id="LN763">763</td><td class="line">		err = report(options, &amp;commit-&gt;object, FSCK_MSG_MISSING_AUTHOR, <span class='string_literal'>"invalid format - expected 'author' line"</span>);</td></tr>
+<tr><td class="num" id="LN764">764</td><td class="line">	<span class='keyword'>else</span> <span class='keyword'>if</span> (author_count &gt; 1)</td></tr>
+<tr><td class="num" id="LN765">765</td><td class="line">		err = report(options, &amp;commit-&gt;object, FSCK_MSG_MULTIPLE_AUTHORS, <span class='string_literal'>"invalid format - multiple 'author' lines"</span>);</td></tr>
+<tr><td class="num" id="LN766">766</td><td class="line">	<span class='keyword'>if</span> (err)</td></tr>
+<tr><td class="num" id="LN767">767</td><td class="line">		<span class='keyword'>return</span> err;</td></tr>
+<tr><td class="num" id="LN768">768</td><td class="line">	<span class='keyword'>if</span> (!skip_prefix(buffer, <span class='string_literal'>"committer "</span>, &amp;buffer))</td></tr>
+<tr><td class="num" id="LN769">769</td><td class="line">		<span class='keyword'>return</span> report(options, &amp;commit-&gt;object, FSCK_MSG_MISSING_COMMITTER, <span class='string_literal'>"invalid format - expected 'committer' line"</span>);</td></tr>
+<tr><td class="num" id="LN770">770</td><td class="line">	err = fsck_ident(&amp;buffer, &amp;commit-&gt;object, options);</td></tr>
+<tr><td class="num" id="LN771">771</td><td class="line">	<span class='keyword'>if</span> (err)</td></tr>
+<tr><td class="num" id="LN772">772</td><td class="line">		<span class='keyword'>return</span> err;</td></tr>
+<tr><td class="num" id="LN773">773</td><td class="line">	<span class='keyword'>if</span> (!commit-&gt;tree) {</td></tr>
+<tr><td class="num" id="LN774">774</td><td class="line">		err = report(options, &amp;commit-&gt;object, FSCK_MSG_BAD_TREE, <span class='string_literal'>"could not load commit's tree %s"</span>, sha1_to_hex(tree_sha1));</td></tr>
+<tr><td class="num" id="LN775">775</td><td class="line">		<span class='keyword'>if</span> (err)</td></tr>
+<tr><td class="num" id="LN776">776</td><td class="line">			<span class='keyword'>return</span> err;</td></tr>
+<tr><td class="num" id="LN777">777</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN778">778</td><td class="line">	<span class='keyword'>if</span> (memchr(buffer_begin, '\0', size)) {</td></tr>
+<tr><td class="num" id="LN779">779</td><td class="line">		err = report(options, &amp;commit-&gt;object, FSCK_MSG_NUL_IN_COMMIT,</td></tr>
+<tr><td class="num" id="LN780">780</td><td class="line">			     <span class='string_literal'>"NUL byte in the commit object body"</span>);</td></tr>
+<tr><td class="num" id="LN781">781</td><td class="line">		<span class='keyword'>if</span> (err)</td></tr>
+<tr><td class="num" id="LN782">782</td><td class="line">			<span class='keyword'>return</span> err;</td></tr>
+<tr><td class="num" id="LN783">783</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN784">784</td><td class="line">	<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN785">785</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN786">786</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN787">787</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> fsck_commit(<span class='keyword'>struct</span> commit *commit, <span class='keyword'>const</span> <span class='keyword'>char</span> *data,</td></tr>
+<tr><td class="num" id="LN788">788</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>long</span> size, <span class='keyword'>struct</span> fsck_options *options)</td></tr>
+<tr><td class="num" id="LN789">789</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN790">790</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *buffer = data ?  data : get_commit_buffer(commit, &amp;size);</td></tr>
+<tr><td class="num" id="LN791">791</td><td class="line">	<span class='keyword'>int</span> ret = fsck_commit_buffer(commit, buffer, size, options);</td></tr>
+<tr><td class="num" id="LN792">792</td><td class="line">	<span class='keyword'>if</span> (!data)</td></tr>
+<tr><td class="num" id="LN793">793</td><td class="line">		unuse_commit_buffer(commit, buffer);</td></tr>
+<tr><td class="num" id="LN794">794</td><td class="line">	<span class='keyword'>return</span> ret;</td></tr>
+<tr><td class="num" id="LN795">795</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN796">796</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN797">797</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> fsck_tag_buffer(<span class='keyword'>struct</span> tag *tag, <span class='keyword'>const</span> <span class='keyword'>char</span> *data,</td></tr>
+<tr><td class="num" id="LN798">798</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>long</span> size, <span class='keyword'>struct</span> fsck_options *options)</td></tr>
+<tr><td class="num" id="LN799">799</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN800">800</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> sha1[20];</td></tr>
+<tr><td class="num" id="LN801">801</td><td class="line">	<span class='keyword'>int</span> ret = 0;</td></tr>
+<tr><td class="num" id="LN802">802</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>char</span> *buffer;</td></tr>
+<tr><td class="num" id="LN803">803</td><td class="line">	<span class='keyword'>char</span> *to_free = <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>, *eol;</td></tr>
+<tr><td class="num" id="LN804">804</td><td class="line">	<span class='keyword'>struct</span> strbuf sb = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN805">805</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN806">806</td><td class="line">	<span class='keyword'>if</span> (data)</td></tr>
+<tr><td class="num" id="LN807">807</td><td class="line">		buffer = data;</td></tr>
+<tr><td class="num" id="LN808">808</td><td class="line">	<span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN809">809</td><td class="line">		<span class='keyword'>enum</span> object_type type;</td></tr>
+<tr><td class="num" id="LN810">810</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN811">811</td><td class="line">		buffer = to_free =</td></tr>
+<tr><td class="num" id="LN812">812</td><td class="line">			read_sha1_file(tag-&gt;object.oid.hash, &amp;type, &amp;size);</td></tr>
+<tr><td class="num" id="LN813">813</td><td class="line">		<span class='keyword'>if</span> (!buffer)</td></tr>
+<tr><td class="num" id="LN814">814</td><td class="line">			<span class='keyword'>return</span> report(options, &amp;tag-&gt;object,</td></tr>
+<tr><td class="num" id="LN815">815</td><td class="line">				FSCK_MSG_MISSING_TAG_OBJECT,</td></tr>
+<tr><td class="num" id="LN816">816</td><td class="line">				<span class='string_literal'>"cannot read tag object"</span>);</td></tr>
+<tr><td class="num" id="LN817">817</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN818">818</td><td class="line">		<span class='keyword'>if</span> (type != OBJ_TAG) {</td></tr>
+<tr><td class="num" id="LN819">819</td><td class="line">			ret = report(options, &amp;tag-&gt;object,</td></tr>
+<tr><td class="num" id="LN820">820</td><td class="line">				FSCK_MSG_TAG_OBJECT_NOT_TAG,</td></tr>
+<tr><td class="num" id="LN821">821</td><td class="line">				<span class='string_literal'>"expected tag got %s"</span>,</td></tr>
+<tr><td class="num" id="LN822">822</td><td class="line">			    typename(type));</td></tr>
+<tr><td class="num" id="LN823">823</td><td class="line">			<span class='keyword'>goto</span> done;</td></tr>
+<tr><td class="num" id="LN824">824</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN825">825</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN826">826</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN827">827</td><td class="line">	ret = verify_headers(buffer, size, &amp;tag-&gt;object, options);</td></tr>
+<tr><td class="num" id="LN828">828</td><td class="line">	<span class='keyword'>if</span> (ret)</td></tr>
+<tr><td class="num" id="LN829">829</td><td class="line">		<span class='keyword'>goto</span> done;</td></tr>
+<tr><td class="num" id="LN830">830</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN831">831</td><td class="line">	<span class='keyword'>if</span> (!skip_prefix(buffer, <span class='string_literal'>"object "</span>, &amp;buffer)) {</td></tr>
+<tr><td class="num" id="LN832">832</td><td class="line">		ret = report(options, &amp;tag-&gt;object, FSCK_MSG_MISSING_OBJECT, <span class='string_literal'>"invalid format - expected 'object' line"</span>);</td></tr>
+<tr><td class="num" id="LN833">833</td><td class="line">		<span class='keyword'>goto</span> done;</td></tr>
+<tr><td class="num" id="LN834">834</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN835">835</td><td class="line">	<span class='keyword'>if</span> (get_sha1_hex(buffer, sha1) || buffer[40] != '\n') {</td></tr>
+<tr><td class="num" id="LN836">836</td><td class="line">		ret = report(options, &amp;tag-&gt;object, FSCK_MSG_BAD_OBJECT_SHA1, <span class='string_literal'>"invalid 'object' line format - bad sha1"</span>);</td></tr>
+<tr><td class="num" id="LN837">837</td><td class="line">		<span class='keyword'>if</span> (ret)</td></tr>
+<tr><td class="num" id="LN838">838</td><td class="line">			<span class='keyword'>goto</span> done;</td></tr>
+<tr><td class="num" id="LN839">839</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN840">840</td><td class="line">	buffer += 41;</td></tr>
+<tr><td class="num" id="LN841">841</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN842">842</td><td class="line">	<span class='keyword'>if</span> (!skip_prefix(buffer, <span class='string_literal'>"type "</span>, &amp;buffer)) {</td></tr>
+<tr><td class="num" id="LN843">843</td><td class="line">		ret = report(options, &amp;tag-&gt;object, FSCK_MSG_MISSING_TYPE_ENTRY, <span class='string_literal'>"invalid format - expected 'type' line"</span>);</td></tr>
+<tr><td class="num" id="LN844">844</td><td class="line">		<span class='keyword'>goto</span> done;</td></tr>
+<tr><td class="num" id="LN845">845</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN846">846</td><td class="line">	eol = strchr(buffer, '\n');</td></tr>
+<tr><td class="num" id="LN847">847</td><td class="line">	<span class='keyword'>if</span> (!eol) {</td></tr>
+<tr><td class="num" id="LN848">848</td><td class="line">		ret = report(options, &amp;tag-&gt;object, FSCK_MSG_MISSING_TYPE, <span class='string_literal'>"invalid format - unexpected end after 'type' line"</span>);</td></tr>
+<tr><td class="num" id="LN849">849</td><td class="line">		<span class='keyword'>goto</span> done;</td></tr>
+<tr><td class="num" id="LN850">850</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN851">851</td><td class="line">	<span class='keyword'>if</span> (type_from_string_gently(buffer, eol - buffer, 1) &lt; 0)</td></tr>
+<tr><td class="num" id="LN852">852</td><td class="line">		ret = report(options, &amp;tag-&gt;object, FSCK_MSG_BAD_TYPE, <span class='string_literal'>"invalid 'type' value"</span>);</td></tr>
+<tr><td class="num" id="LN853">853</td><td class="line">	<span class='keyword'>if</span> (ret)</td></tr>
+<tr><td class="num" id="LN854">854</td><td class="line">		<span class='keyword'>goto</span> done;</td></tr>
+<tr><td class="num" id="LN855">855</td><td class="line">	buffer = eol + 1;</td></tr>
+<tr><td class="num" id="LN856">856</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN857">857</td><td class="line">	<span class='keyword'>if</span> (!skip_prefix(buffer, <span class='string_literal'>"tag "</span>, &amp;buffer)) {</td></tr>
+<tr><td class="num" id="LN858">858</td><td class="line">		ret = report(options, &amp;tag-&gt;object, FSCK_MSG_MISSING_TAG_ENTRY, <span class='string_literal'>"invalid format - expected 'tag' line"</span>);</td></tr>
+<tr><td class="num" id="LN859">859</td><td class="line">		<span class='keyword'>goto</span> done;</td></tr>
+<tr><td class="num" id="LN860">860</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN861">861</td><td class="line">	eol = strchr(buffer, '\n');</td></tr>
+<tr><td class="num" id="LN862">862</td><td class="line">	<span class='keyword'>if</span> (!eol) {</td></tr>
+<tr><td class="num" id="LN863">863</td><td class="line">		ret = report(options, &amp;tag-&gt;object, FSCK_MSG_MISSING_TAG, <span class='string_literal'>"invalid format - unexpected end after 'type' line"</span>);</td></tr>
+<tr><td class="num" id="LN864">864</td><td class="line">		<span class='keyword'>goto</span> done;</td></tr>
+<tr><td class="num" id="LN865">865</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN866">866</td><td class="line">	strbuf_addf(&amp;sb, <span class='string_literal'>"refs/tags/%.*s"</span>, (<span class='keyword'>int</span>)(eol - buffer), buffer);</td></tr>
+<tr><td class="num" id="LN867">867</td><td class="line">	<span class='keyword'>if</span> (check_refname_format(sb.buf, 0)) {</td></tr>
+<tr><td class="num" id="LN868">868</td><td class="line">		ret = report(options, &amp;tag-&gt;object, FSCK_MSG_BAD_TAG_NAME,</td></tr>
+<tr><td class="num" id="LN869">869</td><td class="line">			   <span class='string_literal'>"invalid 'tag' name: %.*s"</span>,</td></tr>
+<tr><td class="num" id="LN870">870</td><td class="line">			   (<span class='keyword'>int</span>)(eol - buffer), buffer);</td></tr>
+<tr><td class="num" id="LN871">871</td><td class="line">		<span class='keyword'>if</span> (ret)</td></tr>
+<tr><td class="num" id="LN872">872</td><td class="line">			<span class='keyword'>goto</span> done;</td></tr>
+<tr><td class="num" id="LN873">873</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN874">874</td><td class="line">	buffer = eol + 1;</td></tr>
+<tr><td class="num" id="LN875">875</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN876">876</td><td class="line">	<span class='keyword'>if</span> (!skip_prefix(buffer, <span class='string_literal'>"tagger "</span>, &amp;buffer)) {</td></tr>
+<tr><td class="num" id="LN877">877</td><td class="line">		<span class='comment'>/* early tags do not contain 'tagger' lines; warn only */</span></td></tr>
+<tr><td class="num" id="LN878">878</td><td class="line">		ret = report(options, &amp;tag-&gt;object, FSCK_MSG_MISSING_TAGGER_ENTRY, <span class='string_literal'>"invalid format - expected 'tagger' line"</span>);</td></tr>
+<tr><td class="num" id="LN879">879</td><td class="line">		<span class='keyword'>if</span> (ret)</td></tr>
+<tr><td class="num" id="LN880">880</td><td class="line">			<span class='keyword'>goto</span> done;</td></tr>
+<tr><td class="num" id="LN881">881</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN882">882</td><td class="line">	<span class='keyword'>else</span></td></tr>
+<tr><td class="num" id="LN883">883</td><td class="line">		ret = fsck_ident(&amp;buffer, &amp;tag-&gt;object, options);</td></tr>
+<tr><td class="num" id="LN884">884</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN885">885</td><td class="line">done:</td></tr>
+<tr><td class="num" id="LN886">886</td><td class="line">	strbuf_release(&amp;sb);</td></tr>
+<tr><td class="num" id="LN887">887</td><td class="line">	free(to_free);</td></tr>
+<tr><td class="num" id="LN888">888</td><td class="line">	<span class='keyword'>return</span> ret;</td></tr>
+<tr><td class="num" id="LN889">889</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN890">890</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN891">891</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> fsck_tag(<span class='keyword'>struct</span> tag *tag, <span class='keyword'>const</span> <span class='keyword'>char</span> *data,</td></tr>
+<tr><td class="num" id="LN892">892</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>long</span> size, <span class='keyword'>struct</span> fsck_options *options)</td></tr>
+<tr><td class="num" id="LN893">893</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN894">894</td><td class="line">	<span class='keyword'>struct</span> object *tagged = tag-&gt;tagged;</td></tr>
+<tr><td class="num" id="LN895">895</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN896">896</td><td class="line">	<span class='keyword'>if</span> (!tagged)</td></tr>
+<tr><td class="num" id="LN897">897</td><td class="line">		<span class='keyword'>return</span> report(options, &amp;tag-&gt;object, FSCK_MSG_BAD_TAG_OBJECT, <span class='string_literal'>"could not load tagged object"</span>);</td></tr>
+<tr><td class="num" id="LN898">898</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN899">899</td><td class="line">	<span class='keyword'>return</span> fsck_tag_buffer(tag, data, size, options);</td></tr>
+<tr><td class="num" id="LN900">900</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN901">901</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN902">902</td><td class="line"><span class='keyword'>int</span> fsck_object(<span class='keyword'>struct</span> object *obj, <span class='keyword'>void</span> *data, <span class='keyword'>unsigned</span> <span class='keyword'>long</span> size,</td></tr>
+<tr><td class="num" id="LN903">903</td><td class="line">	<span class='keyword'>struct</span> fsck_options *options)</td></tr>
+<tr><td class="num" id="LN904">904</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN905">905</td><td class="line">	<span class='keyword'>if</span> (!obj)</td></tr>
+<tr><td class="num" id="LN906">906</td><td class="line">		<span class='keyword'>return</span> report(options, obj, FSCK_MSG_BAD_OBJECT_SHA1, <span class='string_literal'>"no valid object to fsck"</span>);</td></tr>
+<tr><td class="num" id="LN907">907</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN908">908</td><td class="line">	<span class='keyword'>if</span> (obj-&gt;type == OBJ_BLOB)</td></tr>
+<tr><td class="num" id="LN909">909</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN910">910</td><td class="line">	<span class='keyword'>if</span> (obj-&gt;type == OBJ_TREE)</td></tr>
+<tr><td class="num" id="LN911">911</td><td class="line">		<span class='keyword'>return</span> fsck_tree((<span class='keyword'>struct</span> tree *) obj, options);</td></tr>
+<tr><td class="num" id="LN912">912</td><td class="line">	<span class='keyword'>if</span> (obj-&gt;type == OBJ_COMMIT)</td></tr>
+<tr><td class="num" id="LN913">913</td><td class="line">		<span class='keyword'>return</span> fsck_commit((<span class='keyword'>struct</span> commit *) obj, (<span class='keyword'>const</span> <span class='keyword'>char</span> *) data,</td></tr>
+<tr><td class="num" id="LN914">914</td><td class="line">			size, options);</td></tr>
+<tr><td class="num" id="LN915">915</td><td class="line">	<span class='keyword'>if</span> (obj-&gt;type == OBJ_TAG)</td></tr>
+<tr><td class="num" id="LN916">916</td><td class="line">		<span class='keyword'>return</span> fsck_tag((<span class='keyword'>struct</span> tag *) obj, (<span class='keyword'>const</span> <span class='keyword'>char</span> *) data,</td></tr>
+<tr><td class="num" id="LN917">917</td><td class="line">			size, options);</td></tr>
+<tr><td class="num" id="LN918">918</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN919">919</td><td class="line">	<span class='keyword'>return</span> report(options, obj, FSCK_MSG_UNKNOWN_TYPE, <span class='string_literal'>"unknown type '%d' (internal fsck error)"</span>,</td></tr>
+<tr><td class="num" id="LN920">920</td><td class="line">			  obj-&gt;type);</td></tr>
+<tr><td class="num" id="LN921">921</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN922">922</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN923">923</td><td class="line"><span class='keyword'>int</span> fsck_error_function(<span class='keyword'>struct</span> fsck_options *o,</td></tr>
+<tr><td class="num" id="LN924">924</td><td class="line">	<span class='keyword'>struct</span> object *obj, <span class='keyword'>int</span> msg_type, <span class='keyword'>const</span> <span class='keyword'>char</span> *message)</td></tr>
+<tr><td class="num" id="LN925">925</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN926">926</td><td class="line">	<span class='keyword'>if</span> (msg_type == <span class='macro'>FSCK_WARN<span class='expansion'>2</span></span>) {</td></tr>
+<tr><td class="num" id="LN927">927</td><td class="line">		warning(<span class='string_literal'>"object %s: %s"</span>, describe_object(o, obj), message);</td></tr>
+<tr><td class="num" id="LN928">928</td><td class="line">		<span class='keyword'>return</span> 0;</td></tr>
+<tr><td class="num" id="LN929">929</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN930">930</td><td class="line">	<span class='macro'>error(<span class='string_literal'>"object %s: %s"</span>, describe_object(o, obj), message)<span class='expansion'>(error("object %s: %s", describe_object(o, obj), message), const_error<br>())</span></span>;</td></tr>
+<tr><td class="num" id="LN931">931</td><td class="line">	<span class='keyword'>return</span> 1;</td></tr>
+<tr><td class="num" id="LN932">932</td><td class="line">}</td></tr>
+</table></body></html>

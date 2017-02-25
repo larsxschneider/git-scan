@@ -1,0 +1,280 @@
+<!doctype html>
+<html>
+<head>
+<title>builtin/mktree.c</title>
+<style type="text/css">
+ body { color:#000000; background-color:#ffffff }
+ body { font-family:Helvetica, sans-serif; font-size:10pt }
+ h1 { font-size:14pt }
+ .code { border-collapse:collapse; width:100%; }
+ .code { font-family: "Monospace", monospace; font-size:10pt }
+ .code { line-height: 1.2em }
+ .comment { color: green; font-style: oblique }
+ .keyword { color: blue }
+ .string_literal { color: red }
+ .directive { color: darkmagenta }
+ .expansion { display: none; }
+ .macro:hover .expansion { display: block; border: 2px solid #FF0000; padding: 2px; background-color:#FFF0F0; font-weight: normal;   -webkit-border-radius:5px;  -webkit-box-shadow:1px 1px 7px #000; position: absolute; top: -1em; left:10em; z-index: 1 } 
+ .macro { color: darkmagenta; background-color:LemonChiffon; position: relative }
+ .num { width:2.5em; padding-right:2ex; background-color:#eeeeee }
+ .num { text-align:right; font-size:8pt }
+ .num { color:#444444 }
+ .line { padding-left: 1ex; border-left: 3px solid #ccc }
+ .line { white-space: pre }
+ .msg { -webkit-box-shadow:1px 1px 7px #000 }
+ .msg { -webkit-border-radius:5px }
+ .msg { font-family:Helvetica, sans-serif; font-size:8pt }
+ .msg { float:left }
+ .msg { padding:0.25em 1ex 0.25em 1ex }
+ .msg { margin-top:10px; margin-bottom:10px }
+ .msg { font-weight:bold }
+ .msg { max-width:60em; word-wrap: break-word; white-space: pre-wrap }
+ .msgT { padding:0x; spacing:0x }
+ .msgEvent { background-color:#fff8b4; color:#000000 }
+ .msgControl { background-color:#bbbbbb; color:#000000 }
+ .mrange { background-color:#dfddf3 }
+ .mrange { border-bottom:1px solid #6F9DBE }
+ .PathIndex { font-weight: bold; padding:0px 5px; margin-right:5px; }
+ .PathIndex { -webkit-border-radius:8px }
+ .PathIndexEvent { background-color:#bfba87 }
+ .PathIndexControl { background-color:#8c8c8c }
+ .PathNav a { text-decoration:none; font-size: larger }
+ .CodeInsertionHint { font-weight: bold; background-color: #10dd10 }
+ .CodeRemovalHint { background-color:#de1010 }
+ .CodeRemovalHint { border-bottom:1px solid #6F9DBE }
+ table.simpletable {
+   padding: 5px;
+   font-size:12pt;
+   margin:20px;
+   border-collapse: collapse; border-spacing: 0px;
+ }
+ td.rowname {
+   text-align:right; font-weight:bold; color:#444444;
+   padding-right:2ex; }
+</style>
+</head>
+<body>
+<!-- BUGDESC Value stored to 'ac' is never read -->
+
+<!-- BUGTYPE Dead assignment -->
+
+<!-- BUGCATEGORY Dead store -->
+
+<!-- BUGFILE /Users/lars/Code/git/builtin/mktree.c -->
+
+<!-- FILENAME mktree.c -->
+
+<!-- FUNCTIONNAME cmd_mktree -->
+
+<!-- ISSUEHASHCONTENTOFLINEINCONTEXT a6484e9aa234263beb2e5733fef636fe -->
+
+<!-- BUGLINE 158 -->
+
+<!-- BUGCOLUMN 2 -->
+
+<!-- BUGPATHLENGTH 1 -->
+
+<!-- BUGMETAEND -->
+<!-- REPORTHEADER -->
+<h3>Bug Summary</h3>
+<table class="simpletable">
+<tr><td class="rowname">File:</td><td>builtin/mktree.c</td></tr>
+<tr><td class="rowname">Location:</td><td><a href="#EndPath">line 158, column 2</a></td></tr>
+<tr><td class="rowname">Description:</td><td>Value stored to 'ac' is never read</td></tr>
+</table>
+<!-- REPORTSUMMARYEXTRA -->
+<h3>Annotated Source Code</h3>
+<table class="code">
+<tr><td class="num" id="LN1">1</td><td class="line"><span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN2">2</td><td class="line"> <span class='comment'>* GIT - the stupid content tracker</span></td></tr>
+<tr><td class="num" id="LN3">3</td><td class="line"> <span class='comment'>*</span></td></tr>
+<tr><td class="num" id="LN4">4</td><td class="line"> <span class='comment'>* Copyright (c) Junio C Hamano, 2006, 2009</span></td></tr>
+<tr><td class="num" id="LN5">5</td><td class="line"> <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN6">6</td><td class="line"><span class='directive'>#include "builtin.h"</span></td></tr>
+<tr><td class="num" id="LN7">7</td><td class="line"><span class='directive'>#include "quote.h"</span></td></tr>
+<tr><td class="num" id="LN8">8</td><td class="line"><span class='directive'>#include "tree.h"</span></td></tr>
+<tr><td class="num" id="LN9">9</td><td class="line"><span class='directive'>#include "parse-options.h"</span></td></tr>
+<tr><td class="num" id="LN10">10</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN11">11</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>struct</span> treeent {</td></tr>
+<tr><td class="num" id="LN12">12</td><td class="line">	<span class='keyword'>unsigned</span> mode;</td></tr>
+<tr><td class="num" id="LN13">13</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> sha1[20];</td></tr>
+<tr><td class="num" id="LN14">14</td><td class="line">	<span class='keyword'>int</span> len;</td></tr>
+<tr><td class="num" id="LN15">15</td><td class="line">	<span class='keyword'>char</span> name[FLEX_ARRAY];</td></tr>
+<tr><td class="num" id="LN16">16</td><td class="line">} **entries;</td></tr>
+<tr><td class="num" id="LN17">17</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> alloc, used;</td></tr>
+<tr><td class="num" id="LN18">18</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN19">19</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> append_to_tree(<span class='keyword'>unsigned</span> mode, <span class='keyword'>unsigned</span> <span class='keyword'>char</span> *sha1, <span class='keyword'>char</span> *path)</td></tr>
+<tr><td class="num" id="LN20">20</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN21">21</td><td class="line">	<span class='keyword'>struct</span> treeent *ent;</td></tr>
+<tr><td class="num" id="LN22">22</td><td class="line">	size_t len = strlen(path);</td></tr>
+<tr><td class="num" id="LN23">23</td><td class="line">	<span class='keyword'>if</span> (strchr(path, '/'))</td></tr>
+<tr><td class="num" id="LN24">24</td><td class="line">		die(<span class='string_literal'>"path %s contains slash"</span>, path);</td></tr>
+<tr><td class="num" id="LN25">25</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN26">26</td><td class="line">	<span class='macro'>FLEX_ALLOC_MEM(ent, name, path, len)<span class='expansion'>do { size_t flex_array_len_ = (len); (ent) = xcalloc(1, st_add<br>(st_add((sizeof(*(ent))),(flex_array_len_)),(1))); __builtin___memcpy_chk<br> ((void *)(ent)-&gt;name, (path), flex_array_len_, __builtin_object_size<br> ((void *)(ent)-&gt;name, 0)); } while (0)</span></span>;</td></tr>
+<tr><td class="num" id="LN27">27</td><td class="line">	ent-&gt;mode = mode;</td></tr>
+<tr><td class="num" id="LN28">28</td><td class="line">	ent-&gt;len = len;</td></tr>
+<tr><td class="num" id="LN29">29</td><td class="line">	hashcpy(ent-&gt;sha1, sha1);</td></tr>
+<tr><td class="num" id="LN30">30</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN31">31</td><td class="line">	<span class='macro'>ALLOC_GROW(entries, used + 1, alloc)<span class='expansion'>do { if ((used + 1) &gt; alloc) { if ((((alloc)+16)*3/2) &lt;<br> (used + 1)) alloc = (used + 1); else alloc = (((alloc)+16)*3<br>/2); (entries) = xrealloc((entries), st_mult(sizeof(*(entries<br>)), (alloc))); } } while (0)</span></span>;</td></tr>
+<tr><td class="num" id="LN32">32</td><td class="line">	entries[used++] = ent;</td></tr>
+<tr><td class="num" id="LN33">33</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN34">34</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN35">35</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>int</span> ent_compare(<span class='keyword'>const</span> <span class='keyword'>void</span> *a_, <span class='keyword'>const</span> <span class='keyword'>void</span> *b_)</td></tr>
+<tr><td class="num" id="LN36">36</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN37">37</td><td class="line">	<span class='keyword'>struct</span> treeent *a = *(<span class='keyword'>struct</span> treeent **)a_;</td></tr>
+<tr><td class="num" id="LN38">38</td><td class="line">	<span class='keyword'>struct</span> treeent *b = *(<span class='keyword'>struct</span> treeent **)b_;</td></tr>
+<tr><td class="num" id="LN39">39</td><td class="line">	<span class='keyword'>return</span> base_name_compare(a-&gt;name, a-&gt;len, a-&gt;mode,</td></tr>
+<tr><td class="num" id="LN40">40</td><td class="line">				 b-&gt;name, b-&gt;len, b-&gt;mode);</td></tr>
+<tr><td class="num" id="LN41">41</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN42">42</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN43">43</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> write_tree(<span class='keyword'>unsigned</span> <span class='keyword'>char</span> *sha1)</td></tr>
+<tr><td class="num" id="LN44">44</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN45">45</td><td class="line">	<span class='keyword'>struct</span> strbuf buf;</td></tr>
+<tr><td class="num" id="LN46">46</td><td class="line">	size_t size;</td></tr>
+<tr><td class="num" id="LN47">47</td><td class="line">	<span class='keyword'>int</span> i;</td></tr>
+<tr><td class="num" id="LN48">48</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN49">49</td><td class="line">	<span class='macro'>QSORT(entries, used, ent_compare)<span class='expansion'>sane_qsort((entries), (used), sizeof(*(entries)), ent_compare<br>)</span></span>;</td></tr>
+<tr><td class="num" id="LN50">50</td><td class="line">	<span class='keyword'>for</span> (size = i = 0; i &lt; used; i++)</td></tr>
+<tr><td class="num" id="LN51">51</td><td class="line">		size += 32 + entries[i]-&gt;len;</td></tr>
+<tr><td class="num" id="LN52">52</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN53">53</td><td class="line">	strbuf_init(&amp;buf, size);</td></tr>
+<tr><td class="num" id="LN54">54</td><td class="line">	<span class='keyword'>for</span> (i = 0; i &lt; used; i++) {</td></tr>
+<tr><td class="num" id="LN55">55</td><td class="line">		<span class='keyword'>struct</span> treeent *ent = entries[i];</td></tr>
+<tr><td class="num" id="LN56">56</td><td class="line">		strbuf_addf(&amp;buf, <span class='string_literal'>"%o %s%c"</span>, ent-&gt;mode, ent-&gt;name, '\0');</td></tr>
+<tr><td class="num" id="LN57">57</td><td class="line">		strbuf_add(&amp;buf, ent-&gt;sha1, 20);</td></tr>
+<tr><td class="num" id="LN58">58</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN59">59</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN60">60</td><td class="line">	write_sha1_file(buf.buf, buf.len, tree_type, sha1);</td></tr>
+<tr><td class="num" id="LN61">61</td><td class="line">	strbuf_release(&amp;buf);</td></tr>
+<tr><td class="num" id="LN62">62</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN63">63</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN64">64</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>const</span> <span class='keyword'>char</span> *mktree_usage[] = {</td></tr>
+<tr><td class="num" id="LN65">65</td><td class="line">	<span class='macro'>N_(<span class='string_literal'>"git mktree [-z] [--missing] [--batch]"</span>)<span class='expansion'>("git mktree [-z] [--missing] [--batch]")</span></span>,</td></tr>
+<tr><td class="num" id="LN66">66</td><td class="line">	<span class='macro'>NULL<span class='expansion'>((void*)0)</span></span></td></tr>
+<tr><td class="num" id="LN67">67</td><td class="line">};</td></tr>
+<tr><td class="num" id="LN68">68</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN69">69</td><td class="line"><span class='keyword'>static</span> <span class='keyword'>void</span> mktree_line(<span class='keyword'>char</span> *buf, size_t len, <span class='keyword'>int</span> nul_term_line, <span class='keyword'>int</span> allow_missing)</td></tr>
+<tr><td class="num" id="LN70">70</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN71">71</td><td class="line">	<span class='keyword'>char</span> *ptr, *ntr;</td></tr>
+<tr><td class="num" id="LN72">72</td><td class="line">	<span class='keyword'>unsigned</span> mode;</td></tr>
+<tr><td class="num" id="LN73">73</td><td class="line">	<span class='keyword'>enum</span> object_type mode_type; <span class='comment'>/* object type derived from mode */</span></td></tr>
+<tr><td class="num" id="LN74">74</td><td class="line">	<span class='keyword'>enum</span> object_type obj_type; <span class='comment'>/* object type derived from sha */</span></td></tr>
+<tr><td class="num" id="LN75">75</td><td class="line">	<span class='keyword'>char</span> *path;</td></tr>
+<tr><td class="num" id="LN76">76</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> sha1[20];</td></tr>
+<tr><td class="num" id="LN77">77</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN78">78</td><td class="line">	ptr = buf;</td></tr>
+<tr><td class="num" id="LN79">79</td><td class="line">	<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN80">80</td><td class="line">	 <span class='comment'>* Read non-recursive ls-tree output format:</span></td></tr>
+<tr><td class="num" id="LN81">81</td><td class="line">	 <span class='comment'>*     mode SP type SP sha1 TAB name</span></td></tr>
+<tr><td class="num" id="LN82">82</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN83">83</td><td class="line">	mode = strtoul(ptr, &amp;ntr, 8);</td></tr>
+<tr><td class="num" id="LN84">84</td><td class="line">	<span class='keyword'>if</span> (ptr == ntr || !ntr || *ntr != ' ')</td></tr>
+<tr><td class="num" id="LN85">85</td><td class="line">		die(<span class='string_literal'>"input format error: %s"</span>, buf);</td></tr>
+<tr><td class="num" id="LN86">86</td><td class="line">	ptr = ntr + 1; <span class='comment'>/* type */</span></td></tr>
+<tr><td class="num" id="LN87">87</td><td class="line">	ntr = strchr(ptr, ' ');</td></tr>
+<tr><td class="num" id="LN88">88</td><td class="line">	<span class='keyword'>if</span> (!ntr || buf + len &lt;= ntr + 40 ||</td></tr>
+<tr><td class="num" id="LN89">89</td><td class="line">	    ntr[41] != '\t' ||</td></tr>
+<tr><td class="num" id="LN90">90</td><td class="line">	    get_sha1_hex(ntr + 1, sha1))</td></tr>
+<tr><td class="num" id="LN91">91</td><td class="line">		die(<span class='string_literal'>"input format error: %s"</span>, buf);</td></tr>
+<tr><td class="num" id="LN92">92</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN93">93</td><td class="line">	<span class='comment'>/* It is perfectly normal if we do not have a commit from a submodule */</span></td></tr>
+<tr><td class="num" id="LN94">94</td><td class="line">	<span class='keyword'>if</span> (<span class='macro'>S_ISGITLINK(mode)<span class='expansion'>(((mode) &amp; 0170000) == 0160000)</span></span>)</td></tr>
+<tr><td class="num" id="LN95">95</td><td class="line">		allow_missing = 1;</td></tr>
+<tr><td class="num" id="LN96">96</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN97">97</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN98">98</td><td class="line">	*ntr++ = 0; <span class='comment'>/* now at the beginning of SHA1 */</span></td></tr>
+<tr><td class="num" id="LN99">99</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN100">100</td><td class="line">	path = ntr + 41;  <span class='comment'>/* at the beginning of name */</span></td></tr>
+<tr><td class="num" id="LN101">101</td><td class="line">	<span class='keyword'>if</span> (!nul_term_line &amp;&amp; path[0] == '"') {</td></tr>
+<tr><td class="num" id="LN102">102</td><td class="line">		<span class='keyword'>struct</span> strbuf p_uq = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN103">103</td><td class="line">		<span class='keyword'>if</span> (unquote_c_style(&amp;p_uq, path, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>))</td></tr>
+<tr><td class="num" id="LN104">104</td><td class="line">			die(<span class='string_literal'>"invalid quoting"</span>);</td></tr>
+<tr><td class="num" id="LN105">105</td><td class="line">		path = strbuf_detach(&amp;p_uq, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>);</td></tr>
+<tr><td class="num" id="LN106">106</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN107">107</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN108">108</td><td class="line">	<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN109">109</td><td class="line">	 <span class='comment'>* Object type is redundantly derivable three ways.</span></td></tr>
+<tr><td class="num" id="LN110">110</td><td class="line">	 <span class='comment'>* These should all agree.</span></td></tr>
+<tr><td class="num" id="LN111">111</td><td class="line">	 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN112">112</td><td class="line">	mode_type = object_type(mode);</td></tr>
+<tr><td class="num" id="LN113">113</td><td class="line">	<span class='keyword'>if</span> (mode_type != <span class='macro'>type_from_string(ptr)<span class='expansion'>type_from_string_gently(ptr, -1, 0)</span></span>) {</td></tr>
+<tr><td class="num" id="LN114">114</td><td class="line">		die(<span class='string_literal'>"entry '%s' object type (%s) doesn't match mode type (%s)"</span>,</td></tr>
+<tr><td class="num" id="LN115">115</td><td class="line">			path, ptr, typename(mode_type));</td></tr>
+<tr><td class="num" id="LN116">116</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN117">117</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN118">118</td><td class="line">	<span class='comment'>/* Check the type of object identified by sha1 */</span></td></tr>
+<tr><td class="num" id="LN119">119</td><td class="line">	obj_type = sha1_object_info(sha1, <span class='macro'>NULL<span class='expansion'>((void*)0)</span></span>);</td></tr>
+<tr><td class="num" id="LN120">120</td><td class="line">	<span class='keyword'>if</span> (obj_type &lt; 0) {</td></tr>
+<tr><td class="num" id="LN121">121</td><td class="line">		<span class='keyword'>if</span> (allow_missing) {</td></tr>
+<tr><td class="num" id="LN122">122</td><td class="line">			; <span class='comment'>/* no problem - missing objects are presumed to be of the right type */</span></td></tr>
+<tr><td class="num" id="LN123">123</td><td class="line">		} <span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN124">124</td><td class="line">			die(<span class='string_literal'>"entry '%s' object %s is unavailable"</span>, path, sha1_to_hex(sha1));</td></tr>
+<tr><td class="num" id="LN125">125</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN126">126</td><td class="line">	} <span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN127">127</td><td class="line">		<span class='keyword'>if</span> (obj_type != mode_type) {</td></tr>
+<tr><td class="num" id="LN128">128</td><td class="line">			<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN129">129</td><td class="line">			 <span class='comment'>* The object exists but is of the wrong type.</span></td></tr>
+<tr><td class="num" id="LN130">130</td><td class="line">			 <span class='comment'>* This is a problem regardless of allow_missing</span></td></tr>
+<tr><td class="num" id="LN131">131</td><td class="line">			 <span class='comment'>* because the new tree entry will never be correct.</span></td></tr>
+<tr><td class="num" id="LN132">132</td><td class="line">			 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN133">133</td><td class="line">			die(<span class='string_literal'>"entry '%s' object %s is a %s but specified type was (%s)"</span>,</td></tr>
+<tr><td class="num" id="LN134">134</td><td class="line">				path, sha1_to_hex(sha1), typename(obj_type), typename(mode_type));</td></tr>
+<tr><td class="num" id="LN135">135</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN136">136</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN137">137</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN138">138</td><td class="line">	append_to_tree(mode, sha1, path);</td></tr>
+<tr><td class="num" id="LN139">139</td><td class="line">}</td></tr>
+<tr><td class="num" id="LN140">140</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN141">141</td><td class="line"><span class='keyword'>int</span> cmd_mktree(<span class='keyword'>int</span> ac, <span class='keyword'>const</span> <span class='keyword'>char</span> **av, <span class='keyword'>const</span> <span class='keyword'>char</span> *prefix)</td></tr>
+<tr><td class="num" id="LN142">142</td><td class="line">{</td></tr>
+<tr><td class="num" id="LN143">143</td><td class="line">	<span class='keyword'>struct</span> strbuf sb = <span class='macro'>STRBUF_INIT<span class='expansion'>{ 0, 0, strbuf_slopbuf }</span></span>;</td></tr>
+<tr><td class="num" id="LN144">144</td><td class="line">	<span class='keyword'>unsigned</span> <span class='keyword'>char</span> sha1[20];</td></tr>
+<tr><td class="num" id="LN145">145</td><td class="line">	<span class='keyword'>int</span> nul_term_line = 0;</td></tr>
+<tr><td class="num" id="LN146">146</td><td class="line">	<span class='keyword'>int</span> allow_missing = 0;</td></tr>
+<tr><td class="num" id="LN147">147</td><td class="line">	<span class='keyword'>int</span> is_batch_mode = 0;</td></tr>
+<tr><td class="num" id="LN148">148</td><td class="line">	<span class='keyword'>int</span> got_eof = 0;</td></tr>
+<tr><td class="num" id="LN149">149</td><td class="line">	strbuf_getline_fn getline_fn;</td></tr>
+<tr><td class="num" id="LN150">150</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN151">151</td><td class="line">	<span class='keyword'>const</span> <span class='keyword'>struct</span> option option[] = {</td></tr>
+<tr><td class="num" id="LN152">152</td><td class="line">		<span class='macro'>OPT_BOOL('z', NULL, &amp;nul_term_line, N_(<span class='string_literal'>"input is NUL terminated"</span>))<span class='expansion'>{ OPTION_SET_INT, ('z'), (((void*)0)), (&amp;nul_term_line), (<br>(void*)0), (("input is NUL terminated")), PARSE_OPT_NOARG, ((<br>void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN153">153</td><td class="line">		<span class='macro'>OPT_SET_INT( 0 , <span class='string_literal'>"missing"</span>, &amp;allow_missing, N_(<span class='string_literal'>"allow missing objects"</span>), 1)<span class='expansion'>{ OPTION_SET_INT, (0), ("missing"), (&amp;allow_missing), ((void<br>*)0), (("allow missing objects")), PARSE_OPT_NOARG, ((void*)0<br>), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN154">154</td><td class="line">		<span class='macro'>OPT_SET_INT( 0 , <span class='string_literal'>"batch"</span>, &amp;is_batch_mode, N_(<span class='string_literal'>"allow creation of more than one tree"</span>), 1)<span class='expansion'>{ OPTION_SET_INT, (0), ("batch"), (&amp;is_batch_mode), ((void<br>*)0), (("allow creation of more than one tree")), PARSE_OPT_NOARG<br>, ((void*)0), (1) }</span></span>,</td></tr>
+<tr><td class="num" id="LN155">155</td><td class="line">		<span class='macro'>OPT_END()<span class='expansion'>{ OPTION_END }</span></span></td></tr>
+<tr><td class="num" id="LN156">156</td><td class="line">	};</td></tr>
+<tr><td class="num" id="LN157">157</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN158">158</td><td class="line">	ac = <span class="mrange">parse_options(ac, av, prefix, option, mktree_usage, 0)</span>;</td></tr>
+<tr><td class="num"></td><td class="line"><div id="EndPath" class="msg msgEvent" style="margin-left:9ex">Value stored to 'ac' is never read</div></td></tr>
+<tr><td class="num" id="LN159">159</td><td class="line">	getline_fn = nul_term_line ? strbuf_getline_nul : strbuf_getline_lf;</td></tr>
+<tr><td class="num" id="LN160">160</td><td class="line"> </td></tr>
+<tr><td class="num" id="LN161">161</td><td class="line">	<span class='keyword'>while</span> (!got_eof) {</td></tr>
+<tr><td class="num" id="LN162">162</td><td class="line">		<span class='keyword'>while</span> (1) {</td></tr>
+<tr><td class="num" id="LN163">163</td><td class="line">			<span class='keyword'>if</span> (getline_fn(&amp;sb, <span class='macro'>stdin<span class='expansion'>__stdinp</span></span>) == <span class='macro'>EOF<span class='expansion'>(-1)</span></span>) {</td></tr>
+<tr><td class="num" id="LN164">164</td><td class="line">				got_eof = 1;</td></tr>
+<tr><td class="num" id="LN165">165</td><td class="line">				<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN166">166</td><td class="line">			}</td></tr>
+<tr><td class="num" id="LN167">167</td><td class="line">			<span class='keyword'>if</span> (sb.buf[0] == '\0') {</td></tr>
+<tr><td class="num" id="LN168">168</td><td class="line">				<span class='comment'>/* empty lines denote tree boundaries in batch mode */</span></td></tr>
+<tr><td class="num" id="LN169">169</td><td class="line">				<span class='keyword'>if</span> (is_batch_mode)</td></tr>
+<tr><td class="num" id="LN170">170</td><td class="line">					<span class='keyword'>break</span>;</td></tr>
+<tr><td class="num" id="LN171">171</td><td class="line">				die(<span class='string_literal'>"input format error: (blank line only valid in batch mode)"</span>);</td></tr>
+<tr><td class="num" id="LN172">172</td><td class="line">			}</td></tr>
+<tr><td class="num" id="LN173">173</td><td class="line">			mktree_line(sb.buf, sb.len, nul_term_line, allow_missing);</td></tr>
+<tr><td class="num" id="LN174">174</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN175">175</td><td class="line">		<span class='keyword'>if</span> (is_batch_mode &amp;&amp; got_eof &amp;&amp; used &lt; 1) {</td></tr>
+<tr><td class="num" id="LN176">176</td><td class="line">			<span class='comment'>/*</span></td></tr>
+<tr><td class="num" id="LN177">177</td><td class="line">			 <span class='comment'>* Execution gets here if the last tree entry is terminated with a</span></td></tr>
+<tr><td class="num" id="LN178">178</td><td class="line">			 <span class='comment'>* new-line.  The final new-line has been made optional to be</span></td></tr>
+<tr><td class="num" id="LN179">179</td><td class="line">			 <span class='comment'>* consistent with the original non-batch behaviour of mktree.</span></td></tr>
+<tr><td class="num" id="LN180">180</td><td class="line">			 <span class='comment'>*/</span></td></tr>
+<tr><td class="num" id="LN181">181</td><td class="line">			; <span class='comment'>/* skip creating an empty tree */</span></td></tr>
+<tr><td class="num" id="LN182">182</td><td class="line">		} <span class='keyword'>else</span> {</td></tr>
+<tr><td class="num" id="LN183">183</td><td class="line">			write_tree(sha1);</td></tr>
+<tr><td class="num" id="LN184">184</td><td class="line">			puts(sha1_to_hex(sha1));</td></tr>
+<tr><td class="num" id="LN185">185</td><td class="line">			fflush(<span class='macro'>stdout<span class='expansion'>__stdoutp</span></span>);</td></tr>
+<tr><td class="num" id="LN186">186</td><td class="line">		}</td></tr>
+<tr><td class="num" id="LN187">187</td><td class="line">		used=0; <span class='comment'>/* reset tree entry buffer for re-use in batch mode */</span></td></tr>
+<tr><td class="num" id="LN188">188</td><td class="line">	}</td></tr>
+<tr><td class="num" id="LN189">189</td><td class="line">	strbuf_release(&amp;sb);</td></tr>
+<tr><td class="num" id="LN190">190</td><td class="line">	exit(0);</td></tr>
+<tr><td class="num" id="LN191">191</td><td class="line">}</td></tr>
+</table></body></html>
